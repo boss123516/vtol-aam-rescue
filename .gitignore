@@ -1,0 +1,28 @@
+# ROS2 build outputs
+ros2_ws/build/
+ros2_ws/install/
+ros2_ws/log/
+
+# Runtime logs
+logs/
+*.log
+*.csv
+
+# Python cache
+__pycache__/
+*.pyc
+
+# Large model files
+*.pt
+*.onnx
+*.engine
+
+# OS / editor
+.DS_Store
+.vscode/
+.idea/
+
+# Gazebo / PX4 runtime artifacts
+*.ulg
+*.bag
+*.db3
