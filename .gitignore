@@ -26,3 +26,31 @@ __pycache__/
 *.ulg
 *.bag
 *.db3
+
+# ROS2 build artifacts
+ros2_ws/build/
+ros2_ws/install/
+ros2_ws/log/
+
+# Runtime logs
+*.log
+*.bag
+*.db3
+
+# Large media
+*.mp4
+*.webm
+
+# ROS2 build artifacts
+ros2_ws/build/
+ros2_ws/install/
+ros2_ws/log/
+
+# Runtime logs
+*.log
+*.bag
+*.db3
+
+# Large media
+*.mp4
+*.webm
