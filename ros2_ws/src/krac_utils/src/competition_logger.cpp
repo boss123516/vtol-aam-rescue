@@ -30,6 +30,8 @@ public:
     {
         auto qos_profile = rclcpp::SensorDataQoS();
 
+        this->declare_parameter("log_dir", "");
+
         // 1. 파라미터 로딩 (YAML 파일과 동일한 GPS 좌표 사용)
         this->declare_parameter("wp1", std::vector<double>{0.0, 0.0, 0.0});
         this->declare_parameter("wp2", std::vector<double>{0.0, 0.0, 0.0});
@@ -112,7 +114,12 @@ private:
         }
 
         std::string home_path = home_env;
-        std::string log_dir = home_path + "/vtol-aam-rescue/logs/competition";
+        std::string log_dir = this->get_parameter("log_dir").as_string();
+        if (log_dir.empty()) {
+            // 기본값: 현재 실행 위치 기준 logs/competition.
+            // ros2 launch를 repo/ros2_ws에서 실행하면 repo/ros2_ws/logs/competition에 생성됩니다.
+            log_dir = std::filesystem::current_path().string() + "/logs/competition";
+        }
 
         // 로그 저장 폴더 생성
         std::filesystem::create_directories(log_dir);

@@ -13,52 +13,48 @@ find_package(krac_interfaces REQUIRED)
 find_package(tf2 REQUIRED)
 find_package(tf2_geometry_msgs REQUIRED)
 find_package(std_srvs REQUIRED)
-# [추가] GPS 메시지 사용을 위해 필요
-find_package(sensor_msgs REQUIRED) 
+find_package(sensor_msgs REQUIRED)
 
 include_directories(include)
 
-# --------------------------------------------------------
-# 1.원 궤도 알고리즘 노드 
-# --------------------------------------------------------
 add_executable(vtol_fsm src/vtol_fsm.cpp)
 ament_target_dependencies(vtol_fsm
   rclcpp
   mavros_msgs
   geometry_msgs
   krac_interfaces
-  tf2 
+  tf2
   tf2_geometry_msgs
-  sensor_msgs # [추가]
+  sensor_msgs
   std_srvs
 )
 
-# --------------------------------------------------------
-# 2.P-Turn 방식 
-# --------------------------------------------------------
 add_executable(vtol_fsm_P src/vtol_fsm_P.cpp)
 ament_target_dependencies(vtol_fsm_P
   rclcpp
   mavros_msgs
   geometry_msgs
   krac_interfaces
-  tf2 
+  tf2
   tf2_geometry_msgs
   sensor_msgs
   std_srvs
 )
 
-# --------------------------------------------------------
-# 3. 설치 (Install) 설정
-# --------------------------------------------------------
-install(TARGETS 
-  vtol_fsm 
-  vtol_fsm_P  # [추가] 여기에도 꼭 적어줘야 install 폴더에 생성됩니다!
+install(TARGETS
+  vtol_fsm
+  vtol_fsm_P
   DESTINATION lib/${PROJECT_NAME}
 )
+
 install(PROGRAMS
-  src/mission_loader.py  # <-- 여기 경로가 중요합니다
+  src/mission_loader.py
   DESTINATION lib/${PROJECT_NAME}
+)
+
+install(FILES
+  src/way3.plan
+  DESTINATION share/${PROJECT_NAME}/mission
 )
 
 ament_package()

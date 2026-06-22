@@ -1,73 +1,116 @@
 import os
+
 from ament_index_python.packages import get_package_share_directory
 from launch import LaunchDescription
-from launch.actions import ExecuteProcess
+from launch.actions import DeclareLaunchArgument, ExecuteProcess
+from launch.conditions import IfCondition
+from launch.substitutions import LaunchConfiguration
 from launch_ros.actions import Node
 
+
+def _default_px4_dir():
+    return os.path.join(os.environ.get('HOME', ''), 'PX4-Autopilot')
+
+
 def generate_launch_description():
-    package_name = 'krac_mission' # 패키지 이름 확인 필요 (설정파일 위치)
-    control_package_name = 'krac_control' # 제어 노드 패키지 이름
-    home_dir = os.environ.get('HOME')
-    px4_dir = os.path.join(home_dir, 'PX4-Autopilot')
+    mission_pkg = 'krac_mission'
+    control_pkg = 'krac_control'
 
-    # 1. 설정 파일 경로들
-    mavros_config = os.path.join(
-        get_package_share_directory(package_name), 'config', 'mavros_params.yaml'
-    )
+    mission_share = get_package_share_directory(mission_pkg)
+    control_share = get_package_share_directory(control_pkg)
 
-    waypoints_config = os.path.join(
-        get_package_share_directory(package_name), 'config', 'waypoints.yaml'
-    )
+    default_mavros_config = os.path.join(mission_share, 'config', 'mavros_params.yaml')
+    default_waypoints_config = os.path.join(mission_share, 'config', 'waypoints.yaml')
+    default_plan_file = os.path.join(control_share, 'mission', 'way3.plan')
 
-    # 2. PX4 + Gazebo 실행
-    vehicle_model = 'gz_amsr_vtol'
+    px4_dir = LaunchConfiguration('px4_dir')
+    vehicle_model = LaunchConfiguration('vehicle_model')
+    mavros_config = LaunchConfiguration('mavros_config')
+    waypoints_config = LaunchConfiguration('waypoints_config')
+    plan_file = LaunchConfiguration('plan_file')
+    start_px4 = LaunchConfiguration('start_px4')
+    start_mavros = LaunchConfiguration('start_mavros')
+    start_fsm = LaunchConfiguration('start_fsm')
+    start_mission_loader = LaunchConfiguration('start_mission_loader')
+    start_logger = LaunchConfiguration('start_logger')
+
     px4_sitl = ExecuteProcess(
         cmd=['make', 'px4_sitl', vehicle_model],
         cwd=px4_dir,
-        output='screen'
+        output='screen',
+        condition=IfCondition(start_px4),
     )
 
-    # 3. MAVROS 노드
     mavros_node = Node(
         package='mavros',
         executable='mavros_node',
         output='screen',
         parameters=[mavros_config],
-        namespace='mavros'
+        namespace='mavros',
+        condition=IfCondition(start_mavros),
     )
 
-    # 4. 제어 노드 (vtol_fsm_P 실행)
-    # [설명] 하이브리드 핸드오버 로직이 들어있는 메인 제어 노드
     control_node = Node(
-        package=control_package_name,
-        executable='vtol_fsm_P', 
+        package=control_pkg,
+        executable='vtol_fsm_P',
+        name='vtol_fsm_P',
         output='screen',
-        parameters=[waypoints_config]
+        parameters=[waypoints_config],
+        condition=IfCondition(start_fsm),
     )
-    
-    # 5. [수정됨] 미션 로더 노드 (변수에 할당)
-    # .plan 파일을 읽어서 PX4에 업로드하는 역할
+
     mission_loader_node = Node(
-        package=control_package_name,
-        executable='mission_loader.py', # CMakeLists.txt install 확인 필수
+        package=control_pkg,
+        executable='mission_loader.py',
         name='mission_loader',
         output='screen',
-        parameters=[{'plan_file': '/home/boss/vtol-aam-rescue/ros2_ws/src/krac_control/src/way3.plan'}]
+        parameters=[{'plan_file': plan_file}],
+        condition=IfCondition(start_mission_loader),
     )
-    
-    # 6. 데이터 로거 노드
+
     logger_node = Node(
         package='krac_utils',
         executable='competition_logger',
+        name='competition_logger',
         output='screen',
-        parameters=[waypoints_config]
+        parameters=[waypoints_config],
+        condition=IfCondition(start_logger),
     )
-    
-    # 7. 실행 목록 반환
+
     return LaunchDescription([
+        DeclareLaunchArgument(
+            'px4_dir',
+            default_value=_default_px4_dir(),
+            description='PX4-Autopilot root directory',
+        ),
+        DeclareLaunchArgument(
+            'vehicle_model',
+            default_value='gz_amsr_vtol',
+            description='PX4 SITL make target, e.g. gz_amsr_vtol',
+        ),
+        DeclareLaunchArgument(
+            'mavros_config',
+            default_value=default_mavros_config,
+            description='MAVROS parameter YAML',
+        ),
+        DeclareLaunchArgument(
+            'waypoints_config',
+            default_value=default_waypoints_config,
+            description='KRAC waypoint/mission parameter YAML',
+        ),
+        DeclareLaunchArgument(
+            'plan_file',
+            default_value=default_plan_file,
+            description='QGroundControl .plan file to upload through MAVROS',
+        ),
+        DeclareLaunchArgument('start_px4', default_value='true'),
+        DeclareLaunchArgument('start_mavros', default_value='true'),
+        DeclareLaunchArgument('start_fsm', default_value='true'),
+        DeclareLaunchArgument('start_mission_loader', default_value='true'),
+        DeclareLaunchArgument('start_logger', default_value='true'),
         px4_sitl,
         mavros_node,
         control_node,
-        mission_loader_node, # [중요] 여기에 추가되어야 실제로 실행됩니다.
-        logger_node
+        mission_loader_node,
+        logger_node,
     ])
