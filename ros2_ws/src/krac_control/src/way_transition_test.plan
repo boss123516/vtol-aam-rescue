@@ -1,0 +1,125 @@
+{
+    "fileType": "Plan",
+    "geoFence": {
+        "circles": [],
+        "polygons": [],
+        "version": 2
+    },
+    "groundStation": "QGroundControl",
+    "mission": {
+        "cruiseSpeed": 15,
+        "firmwareType": 12,
+        "globalPlanAltitudeMode": 0,
+        "hoverSpeed": 5,
+        "items": [
+            {
+                "AMSLAltAboveTerrain": 30.0,
+                "Altitude": 30.0,
+                "AltitudeMode": 1,
+                "autoContinue": true,
+                "command": 84,
+                "doJumpId": 1,
+                "frame": 3,
+                "params": [
+                    0.0,
+                    0.0,
+                    0.0,
+                    0.0,
+                    47.3979712,
+                    8.5461687,
+                    30.0
+                ],
+                "type": "SimpleItem",
+                "amsr_name": "TRANS_TEST_TAKEOFF_30M",
+                "amsr_local_offset_ne_m": [
+                    0.0,
+                    0.0
+                ]
+            },
+            {
+                "AMSLAltAboveTerrain": 30.0,
+                "Altitude": 30.0,
+                "AltitudeMode": 1,
+                "autoContinue": true,
+                "command": 16,
+                "doJumpId": 2,
+                "frame": 3,
+                "params": [
+                    0.0,
+                    50.0,
+                    0.0,
+                    0.0,
+                    47.40246275587496,
+                    8.5461687,
+                    30.0
+                ],
+                "type": "SimpleItem",
+                "amsr_name": "TRANS_TEST_LEG_500M_N",
+                "amsr_local_offset_ne_m": [
+                    500.0,
+                    0.0
+                ]
+            },
+            {
+                "AMSLAltAboveTerrain": 30.0,
+                "Altitude": 30.0,
+                "AltitudeMode": 1,
+                "autoContinue": true,
+                "command": 16,
+                "doJumpId": 3,
+                "frame": 3,
+                "params": [
+                    0.0,
+                    50.0,
+                    0.0,
+                    0.0,
+                    47.41144586762486,
+                    8.5461687,
+                    30.0
+                ],
+                "type": "SimpleItem",
+                "amsr_name": "TRANS_TEST_LEG_1500M_N",
+                "amsr_local_offset_ne_m": [
+                    1500.0,
+                    0.0
+                ]
+            },
+            {
+                "AMSLAltAboveTerrain": 0.0,
+                "Altitude": 0.0,
+                "AltitudeMode": 1,
+                "autoContinue": true,
+                "command": 85,
+                "doJumpId": 4,
+                "frame": 3,
+                "params": [
+                    0.0,
+                    0.0,
+                    30.0,
+                    0.0,
+                    47.41144586762486,
+                    8.5461687,
+                    0.0
+                ],
+                "type": "SimpleItem",
+                "amsr_name": "TRANS_TEST_VTOL_LAND",
+                "amsr_local_offset_ne_m": [
+                    1500.0,
+                    0.0
+                ]
+            }
+        ],
+        "plannedHomePosition": [
+            47.3979712,
+            8.5461687,
+            0.0
+        ],
+        "vehicleType": 20,
+        "version": 2
+    },
+    "rallyPoints": {
+        "points": [],
+        "version": 2
+    },
+    "version": 1
+}

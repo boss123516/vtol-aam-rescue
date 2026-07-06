@@ -767,13 +767,13 @@
 
       <cp>-0.6265 0.200 0.16</cp>
 
-      <area>0.05</area>
+      <area>0.08</area>
       <air_density>1.2041</air_density>
       <forward>-1 0 0</forward>
       <upward>0 1 1</upward>
       <link_name>base_link</link_name>
       <control_joint_name>left_rudder_joint</control_joint_name>
-      <control_joint_rad_to_cl>-1.0</control_joint_rad_to_cl>
+      <control_joint_rad_to_cl>-2.0</control_joint_rad_to_cl>
     </plugin>
 
     <plugin filename="gz-sim-lift-drag-system" name="gz::sim::systems::LiftDrag">
@@ -788,13 +788,13 @@
 
       <cp>-0.6265 -0.200 0.16</cp>
 
-      <area>0.05</area>
+      <area>0.08</area>
       <air_density>1.2041</air_density>
       <forward>-1 0 0</forward>
       <upward>0 -1 1</upward>
       <link_name>base_link</link_name>
       <control_joint_name>right_rudder_joint</control_joint_name>
-      <control_joint_rad_to_cl>-1.0</control_joint_rad_to_cl>
+      <control_joint_rad_to_cl>-2.0</control_joint_rad_to_cl>
     </plugin>
     
     <plugin filename="gz-sim-joint-position-controller-system" name="gz::sim::systems::JointPositionController">
@@ -891,7 +891,10 @@
       <turningDirection>cw</turningDirection>
       <timeConstantUp>0.0125</timeConstantUp>
       <timeConstantDown>0.025</timeConstantDown>
-      <maxRotVelocity>977</maxRotVelocity>
+      <!-- Slightly above the stock 977 cap so the AMSR airframe can reach
+           transition airspeed without the pitch-down failure seen with much
+           higher pusher limits. -->
+      <maxRotVelocity>1225</maxRotVelocity>
       <motorConstant>5.37e-05</motorConstant>
       <momentConstant>0.0</momentConstant>
       <commandSubTopic>command/motor_speed</commandSubTopic>
@@ -918,14 +921,6 @@
 
   </model>
 </sdf>
-
-
-
-
-
-
-
-
 
 
 

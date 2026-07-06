@@ -28,6 +28,7 @@ setup(
             'landing_marker = krac_vision.landing_marker:main',
             'yolo_node = krac_vision.yolo_detector:main',
             'gz_image_republisher = krac_vision.gz_image_republisher:main',
+            'vision_tracker = krac_vision.vision_tracker:main',
         ],
     },
 )

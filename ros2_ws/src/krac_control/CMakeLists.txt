@@ -14,6 +14,8 @@ find_package(tf2 REQUIRED)
 find_package(tf2_geometry_msgs REQUIRED)
 find_package(std_srvs REQUIRED)
 find_package(sensor_msgs REQUIRED)
+find_package(std_msgs REQUIRED)
+find_package(behaviortree_cpp_v3 REQUIRED)
 
 include_directories(include)
 
@@ -41,10 +43,59 @@ ament_target_dependencies(vtol_fsm_P
   std_srvs
 )
 
+add_executable(precision_lander src/precision_lander.cpp)
+ament_target_dependencies(precision_lander
+  rclcpp
+  geometry_msgs
+  krac_interfaces
+  std_srvs
+)
+
+add_executable(krac_bt_mock_runner src/krac_bt_mock_runner.cpp)
+ament_target_dependencies(krac_bt_mock_runner
+  rclcpp
+  behaviortree_cpp_v3
+)
+
+
+add_executable(krac_bt_runner
+  src/krac_bt_runner.cpp
+  src/mission_context.cpp
+  src/bt_register.cpp
+  src/bt_conditions.cpp
+  src/bt_actions_basic.cpp
+  src/bt_actions_mission.cpp
+  src/bt_actions_vision.cpp
+  src/bt_actions_recovery.cpp
+  src/bt_actions_precision.cpp
+)
+ament_target_dependencies(krac_bt_runner
+  rclcpp
+  mavros_msgs
+  geometry_msgs
+  sensor_msgs
+  std_msgs
+  std_srvs
+  krac_interfaces
+  tf2
+  tf2_geometry_msgs
+  behaviortree_cpp_v3
+)
+
 install(TARGETS
+  krac_bt_mock_runner
+  krac_bt_runner
+  precision_lander
   vtol_fsm
   vtol_fsm_P
   DESTINATION lib/${PROJECT_NAME}
+)
+
+install(DIRECTORY
+  bt
+  launch
+  config
+  DESTINATION share/${PROJECT_NAME}
 )
 
 install(PROGRAMS
@@ -52,9 +103,10 @@ install(PROGRAMS
   DESTINATION lib/${PROJECT_NAME}
 )
 
-install(FILES
-  src/way3.plan
+install(DIRECTORY
+  src/
   DESTINATION share/${PROJECT_NAME}/mission
+  FILES_MATCHING PATTERN "*.plan"
 )
 
 ament_package()

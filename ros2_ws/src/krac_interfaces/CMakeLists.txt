@@ -13,6 +13,7 @@ find_package(std_msgs REQUIRED)  # TargetInfo에서 std_msgs/Header를 쓰므로
 rosidl_generate_interfaces(${PROJECT_NAME}
   "msg/FlightPhase.msg"
   "msg/TargetInfo.msg"
+  "msg/TargetError.msg"
   DEPENDENCIES std_msgs
 )
 

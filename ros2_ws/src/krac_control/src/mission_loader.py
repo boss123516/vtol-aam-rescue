@@ -10,7 +10,8 @@ from mavros_msgs.msg import Waypoint
 class MissionLoader(Node):
     def __init__(self):
         super().__init__('mission_loader')
-        
+        self.upload_ok = False
+
         # .plan 파일 경로 파라미터
         self.declare_parameter('plan_file', '')
         plan_path = self.get_parameter('plan_file').value
@@ -22,6 +23,7 @@ class MissionLoader(Node):
             self.get_logger().error(f"Plan file not found: {plan_path}")
             return
 
+        self.get_logger().info(f"Loading mission plan: {plan_path}")
         self.upload_mission(plan_path)
 
     def upload_mission(self, file_path):
@@ -46,6 +48,10 @@ class MissionLoader(Node):
             return
 
         mission_items = data['mission']['items']
+        if mission_items:
+            first_alt = mission_items[0].get('params', [None] * 7)[6]
+            last_alt = mission_items[-1].get('params', [None] * 7)[6]
+            self.get_logger().info(f"Plan altitude check: first={first_alt}, last={last_alt}")
         waypoints = []
 
         # 4. Waypoint 메시지 변환
@@ -60,7 +66,12 @@ class MissionLoader(Node):
             wp.command = item['command']
             wp.is_current = (i == 0)      # 첫 번째만 True
             wp.autocontinue = True
-            
+
+            # 첫 번째 웨이포인트가 이륙(command 84)이면 pitch/yaw 파라미터를 0으로 강제
+            # (QGC .plan 파일이 이 슬롯에 남겨두는 값이 FC에서 예기치 않게 해석되는 것을 방지)
+            if i == 0 and wp.command == 84:
+                params[0] = params[1] = params[2] = params[3] = 0.0
+
             # 파라미터 매핑
             wp.param1 = params[0]
             wp.param2 = params[1]
@@ -81,17 +92,23 @@ class MissionLoader(Node):
         future_push = self.client_wp_push.call_async(req_push)
         rclpy.spin_until_future_complete(self, future_push)
 
-        if future_push.result().success:
+        result = future_push.result()
+        if result and result.success:
             self.get_logger().info("✅ Mission Upload SUCCESS!")
+            self.upload_ok = True
         else:
-            self.get_logger().error(f"❌ Mission Upload FAILED! Sent: {future_push.result().wp_transfered}")
+            transfered = result.wp_transfered if result else 0
+            self.get_logger().error(f"❌ Mission Upload FAILED! Sent: {transfered}")
+            self.upload_ok = False
 
 def main(args=None):
     rclpy.init(args=args)
     node = MissionLoader()
+    ok = getattr(node, 'upload_ok', False)
     # 업로드만 하고 노드는 종료
     node.destroy_node()
     rclpy.shutdown()
+    return 0 if ok else 1
 
 if __name__ == '__main__':
-    main()
+    raise SystemExit(main())

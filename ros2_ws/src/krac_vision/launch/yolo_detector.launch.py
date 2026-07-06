@@ -24,6 +24,7 @@ def generate_launch_description():
     threshold = LaunchConfiguration('threshold')
     device = LaunchConfiguration('device')
     initial_target = LaunchConfiguration('initial_target')
+    image_topic = LaunchConfiguration('image_topic')
 
     return LaunchDescription([
         DeclareLaunchArgument(
@@ -52,6 +53,12 @@ def generate_launch_description():
             description='Initial target class: disabled, all, basket, drop_zone, vertiport'
         ),
 
+        DeclareLaunchArgument(
+            'image_topic',
+            default_value='/image_raw',
+            description='ROS image topic to subscribe'
+        ),
+
         Node(
             package='krac_vision',
             executable='yolo_node',
@@ -62,6 +69,7 @@ def generate_launch_description():
                 'threshold': threshold,
                 'device': device,
                 'initial_target': initial_target,
+                'image_topic': image_topic,
             }],
         )
     ])

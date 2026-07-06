@@ -90,6 +90,7 @@ ros2 topic echo /mavros/state
 ros2 topic echo /mavros/local_position/pose --once
 ros2 topic echo /camera/target_error --once
 ros2 topic hz /image_raw
+gz topic -l | grep amsr_vtol
 gz topic -l
 rqt_graph
 ```

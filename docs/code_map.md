@@ -56,7 +56,7 @@ Custom message definitions.
 ```text
 PX4 SITL + Gazebo
     ↓ camera gz topic
-ros_gz_image image_bridge
+scripts/run_image_bridge_amsr.sh
     ↓ /image_raw
 krac_vision/yolo_detector.py
     ↓ /camera/target_error

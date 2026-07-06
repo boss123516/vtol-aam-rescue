@@ -85,8 +85,8 @@ def generate_launch_description():
         ),
         DeclareLaunchArgument(
             'vehicle_model',
-            default_value='gz_amsr_vtol',
-            description='PX4 SITL make target, e.g. gz_amsr_vtol',
+            default_value='gz_standard_vtol',
+            description='PX4 SITL make target, e.g. gz_standard_vtol or gz_amsr_vtol',
         ),
         DeclareLaunchArgument(
             'mavros_config',

@@ -17,10 +17,24 @@ cp -R "$REPO_DIR/px4_assets/gz/models/amsr_vtol" "$PX4_DIR/Tools/simulation/gz/m
 cp "$REPO_DIR/px4_assets/gz/worlds/my_world.sdf" "$PX4_DIR/Tools/simulation/gz/worlds/"
 cp "$REPO_DIR/px4_assets/airframes/1984_gz_amsr_vtol" "$PX4_DIR/ROMFS/px4fmu_common/init.d-posix/airframes/"
 
+# PX4's stock standard_vtol has no image camera topic. The BT/Yolo SITL path
+# uses standard_vtol for stable FW transition, so apply a minimal camera
+# payload patch that merges model://mono_cam onto base_link.
+if [ -f "$REPO_DIR/px4_assets/model_patches/standard_vtol/model.sdf" ]; then
+  cp "$REPO_DIR/px4_assets/model_patches/standard_vtol/model.sdf" \
+    "$PX4_DIR/Tools/simulation/gz/models/standard_vtol/model.sdf"
+fi
+
 # Optional marker/environment models for Gazebo spawn service.
+# GZ_SIM_RESOURCE_PATH (see ~/.bashrc) only includes
+# $PX4_DIR/Tools/simulation/gz/models, so model:// mesh URIs inside these
+# models only resolve if copied there. ~/.gz/fuel/models is NOT on that path;
+# copying only there (the previous behavior) left model:// mesh references
+# unresolved for any model not also placed under $PX4_DIR manually.
 mkdir -p "$HOME/.gz/fuel/models"
-for m in v_marker land_marker box victim; do
+for m in v_marker land_marker box victim survivor_tray; do
   if [ -d "$REPO_DIR/px4_assets/gz/models/$m" ]; then
+    cp -R "$REPO_DIR/px4_assets/gz/models/$m" "$PX4_DIR/Tools/simulation/gz/models/"
     cp -R "$REPO_DIR/px4_assets/gz/models/$m" "$HOME/.gz/fuel/models/"
   fi
 done
