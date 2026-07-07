@@ -16,6 +16,9 @@ find_package(std_srvs REQUIRED)
 find_package(sensor_msgs REQUIRED)
 find_package(std_msgs REQUIRED)
 find_package(behaviortree_cpp_v3 REQUIRED)
+find_package(PkgConfig REQUIRED)
+pkg_check_modules(SDL2 REQUIRED sdl2)
+pkg_check_modules(SDL2_TTF REQUIRED SDL2_ttf)
 
 include_directories(include)
 
@@ -51,6 +54,14 @@ ament_target_dependencies(precision_lander
   std_srvs
 )
 
+add_executable(vtol_offboard src/vtol_offboard.cpp)
+ament_target_dependencies(vtol_offboard
+  rclcpp
+  mavros_msgs
+  geometry_msgs
+  std_srvs
+)
+
 add_executable(krac_bt_mock_runner src/krac_bt_mock_runner.cpp)
 ament_target_dependencies(krac_bt_mock_runner
   rclcpp
@@ -68,6 +79,7 @@ add_executable(krac_bt_runner
   src/bt_actions_vision.cpp
   src/bt_actions_recovery.cpp
   src/bt_actions_precision.cpp
+  src/bt_viewer.cpp
 )
 ament_target_dependencies(krac_bt_runner
   rclcpp
@@ -81,6 +93,8 @@ ament_target_dependencies(krac_bt_runner
   tf2_geometry_msgs
   behaviortree_cpp_v3
 )
+target_include_directories(krac_bt_runner PRIVATE ${SDL2_INCLUDE_DIRS} ${SDL2_TTF_INCLUDE_DIRS})
+target_link_libraries(krac_bt_runner ${SDL2_LIBRARIES} ${SDL2_TTF_LIBRARIES})
 
 install(TARGETS
   krac_bt_mock_runner
@@ -88,6 +102,7 @@ install(TARGETS
   precision_lander
   vtol_fsm
   vtol_fsm_P
+  vtol_offboard
   DESTINATION lib/${PROJECT_NAME}
 )
 
@@ -100,6 +115,7 @@ install(DIRECTORY
 
 install(PROGRAMS
   src/mission_loader.py
+  src/gripper_test.py
   DESTINATION lib/${PROJECT_NAME}
 )
 

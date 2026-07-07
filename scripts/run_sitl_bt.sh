@@ -34,6 +34,16 @@ AUTO_SPAWN_MODE="${AUTO_SPAWN_MODE:-after_world}"
 AUTO_SPAWN_MIN_ALT_M="${AUTO_SPAWN_MIN_ALT_M:-2.0}"
 AUTO_SPAWN_DELAY_SEC="${AUTO_SPAWN_DELAY_SEC:-2}"
 
+# auto_spawn.sh needs the REP's local (east, north) offset from home to place
+# props correctly; it defaults to way3.plan's REP. When BT_XML_PATH selects the
+# krac24 BT variant, switch those defaults to krac24.plan's REP offset instead
+# (computed from krac24.plan's own plannedHomePosition) — override with
+# AUTO_SPAWN_REP_E/AUTO_SPAWN_REP_N explicitly if a plan's REP location changes.
+if [[ "${BT_XML_PATH:-}" == *krac24* ]]; then
+  export AUTO_SPAWN_REP_E="${AUTO_SPAWN_REP_E:--26.03}"
+  export AUTO_SPAWN_REP_N="${AUTO_SPAWN_REP_N:--31.41}"
+fi
+
 if [[ "${APPLY_PX4_ASSETS}" == "true" ]]; then
   echo "[BT] Applying PX4/Gazebo assets (camera, gripper, mission spawn models)..."
   (
@@ -176,6 +186,17 @@ for i in {1..60}; do
   sleep 1
 done
 
+if [[ "$CONNECTED" == "true" ]]; then
+  # Without a real GCS, PX4's rcAndDataLinkCheck blocks arming ("No connection
+  # to the GCS") whenever NAV_DLL_ACT > 0, since mavros (a companion computer,
+  # not a GCS) never satisfies that check. Force it off so headless BT runs
+  # (no QGroundControl) can still arm.
+  echo "[BT] Disabling NAV_DLL_ACT so arming doesn't require a GCS connection..."
+  ros2 service call /mavros/param/set mavros_msgs/srv/ParamSetV2 \
+    "{force_set: true, param_id: 'NAV_DLL_ACT', value: {type: 2, integer_value: 0}}" \
+    >"$RUN_LOG_DIR/nav_dll_act_disable.log" 2>&1 || true
+fi
+
 if [[ "$CONNECTED" != "true" ]]; then
   echo "[ERROR] MAVROS did not connect within 60 seconds."
   "$REPO_DIR/scripts/collect_bt_debug_logs.sh" "$RUN_LOG_DIR" || true
@@ -183,11 +204,27 @@ if [[ "$CONNECTED" != "true" ]]; then
 fi
 
 echo "[BT] Starting krac_bt_runner..."
+BT_LAUNCH_ARGS=(
+  mission_upload_stub_success:="${MISSION_UPLOAD_STUB_SUCCESS:-false}"
+  gripper_stub_success:="${GRIPPER_STUB_SUCCESS:-false}"
+  print_bt_transitions:="${PRINT_BT_TRANSITIONS:-true}"
+  enable_bt_viewer:="${ENABLE_BT_VIEWER:-false}"
+  bt_viewer_direction:="${BT_VIEWER_DIRECTION:-Vertical}"
+)
+# BT_XML_PATH / BT_PARAMS_FILE: set to switch the mission source, e.g. to fly
+# krac24.plan instead of the default way3.plan:
+#   BT_XML_PATH=$(ros2 pkg prefix krac_control)/share/krac_control/bt/krac_mission_bt_krac24.xml \
+#   BT_PARAMS_FILE=$(ros2 pkg prefix krac_control)/share/krac_control/config/krac_bt_params_krac24.yaml \
+#   ./scripts/run_sitl_bt.sh
+if [[ -n "${BT_XML_PATH:-}" ]]; then
+  BT_LAUNCH_ARGS+=(bt_xml_path:="${BT_XML_PATH}")
+fi
+if [[ -n "${BT_PARAMS_FILE:-}" ]]; then
+  BT_LAUNCH_ARGS+=(params_file:="${BT_PARAMS_FILE}")
+fi
 set +e
 ros2 launch krac_control krac_bt_runner.launch.py \
-  mission_upload_stub_success:="${MISSION_UPLOAD_STUB_SUCCESS:-false}" \
-  gripper_stub_success:="${GRIPPER_STUB_SUCCESS:-false}" \
-  print_bt_transitions:="${PRINT_BT_TRANSITIONS:-true}" \
+  "${BT_LAUNCH_ARGS[@]}" \
   >"$RUN_LOG_DIR/krac_bt_runner.launch.log" 2>&1
 BT_EXIT=$?
 set -e

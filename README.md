@@ -2,110 +2,118 @@
 
 PX4 SITL + Gazebo 기반 VTOL AAM 구조 임무 시뮬레이션 프로젝트입니다.
 
-본 프로젝트는 `amsr_vtol` 커스텀 기체를 사용하며, MAVROS를 통해 PX4와 ROS 2 노드를 연결하고, YOLO 기반 비전 노드를 통해 구조 지점, 착륙 지점, 투하 지점 등을 탐지합니다.
+본 프로젝트는 `amsr_vtol`(커스텀) / `standard_vtol`(기본) 기체를 사용하며, MAVROS를 통해 PX4와 ROS 2 노드를 연결하고, YOLO-OBB + ArUco 비전 파이프라인으로 구조 지점 마커를 탐지해 정밀 착륙합니다. 임무 흐름 전체는 BehaviorTree.CPP 기반 `krac_bt_runner`가 제어합니다 (레거시 FSM은 더 이상 기본 경로가 아닙니다 — 아래 "9. 아키텍처 개요" 참고).
+
+## 팀 / 레포 관계 (인수인계 시 가장 먼저 알아야 할 것)
+
+이 레포는 아래 두 팀 레포를 합친 결과물입니다.
+
+| 역할 | 레포 | 담당 |
+| --- | --- | --- |
+| 베이스(실행 엔진) | 이 레포(`boss123516/vtol-aam-rescue`, `fix/repro-run`) | 영상 |
+| 임무 로직 원본 | `cjfgus814123/krac24` (raw `ros2_ws`, README 없음) | 철현 |
+| Behavior Tree 이식/운용 | `ros2_ws/src/krac_control` 내 BT 관련 파일 전체 | (이 문서 작성자) |
+
+`krac24`의 FSM(`vtol_fsm.cpp`, `precision_lander.cpp`, `vision_tracker.py`, `mission_loader.py`, waypoint 설계)은 이미 이 레포의 `krac_control`/`krac_vision`으로 이식되어 BT 액션/컨디션 노드로 다시 구현돼 있습니다. **임무 로직(웨이포인트, seq, 착륙 파라미터)의 근거를 찾을 때는 항상 krac24 쪽 원본을 먼저 확인하세요** — 이 레포에 있는 값이 krac24와 다르면 대부분 SITL 월드 좌표 재투영이나 테스트용 임시값이지, 새로운 설계가 아닙니다.
 
 ## Demo Screenshot
 
-현재 PX4 SITL, Gazebo Sim, QGroundControl, ROS 2 비전 파이프라인을 통합하여 실행한 화면입니다.
-
 ![VTOL AAM Rescue Demo](docs/images/mission_demo.png)
-
-## Current Progress
-
-현재까지 구현 및 확인된 내용은 다음과 같습니다.
-
-```text
-- PX4 SITL + Gazebo Harmonic 기반 amsr_vtol 기체 실행
-- QGroundControl을 통한 기체 상태 및 미션 경로 모니터링
-- MAVROS 기반 PX4 ↔ ROS 2 연결
-- way3.plan 기반 waypoint mission upload 및 실행
-- Gazebo mission object 자동 스폰
-  - v_marker
-  - rescue_box
-  - victim
-  - drop_marker
-  - survivor_tray_rep
-- REP 구조 지점에 survivor tray 모델 추가
-- Gazebo camera image를 ROS 2 /image_raw로 republish
-- YOLOv8 기반 target detection
-- /camera/set_target으로 탐지 대상 변경
-- /dbg_image를 통한 탐지 결과 시각화
-```
-
-현재 REP / landing 구간은 기존 FSM과 최신 waypoint 구성이 완전히 맞지 않는 부분이 있어, 해당 부분은 임시로 분리하여 테스트 중입니다.
-
-향후 REP 접근, 구조 대상 정렬, 착륙, 재이륙, 복귀 로직은 High-Level Behavior Tree 기반으로 모듈화할 예정입니다.
 
 ---
 
-## 1. Tested Environment
+## 1. Current Status (다음 작업자가 가장 먼저 볼 것)
 
-현재 동작 확인된 환경은 아래와 같습니다.
+```text
+동작 확인됨:
+- PX4 SITL(gz_standard_vtol) + Gazebo Harmonic + MAVROS + QGroundControl 통합 실행
+- krac_bt_runner(BehaviorTree.CPP) 기반 전체 임무: arm → takeoff → 순찰
+  → REP 구조(precision landing stub) → gripper close → resume
+  → 복귀 순찰 → 버티포트 최종 착륙 → disarm, 5회 이상 연속 성공 확인
+- 두 가지 미션 소스를 스위치로 선택 가능 (way3.plan / krac24.plan, 5절 참고)
+- SDL2 기반 실시간 BT 트리 뷰어
+
+아직 안 됨 / 막혀 있음:
+- ⚠️ 실제 YOLO 비전 기반 정밀 착륙이 수렴하지 않음 (10절 "정밀 착륙 미해결
+  이슈" 필독 — 다음 작업 우선순위 1번)
+- drop-zone(투하) 구간: 실제 drop waypoint가 없어 BT에서 통째로 제외됨
+- AMSR 커스텀 기체(`gz_amsr_vtol`)는 빌드만 검증, GUI full-mission 미검증
+- 매 실행마다 Gazebo가 RAM을 다 먹어 OOM 직전까지 감 (8.1절 필독)
+```
+
+---
+
+## 2. Tested Environment
 
 | Item        | Version / Setting           |
 | ----------- | --------------------------- |
 | OS          | Ubuntu 22.04                |
 | ROS 2       | Humble                      |
-| PX4         | PX4-Autopilot SITL          |
+| PX4         | PX4-Autopilot (main branch, `--no-nuttx` ubuntu.sh) |
 | Gazebo      | Gazebo Harmonic / gz-sim8   |
-| MAVROS      | ros-humble-mavros           |
-| Vision      | YOLOv8 + PyTorch            |
-| Image Input | Custom gz_image_republisher |
+| MAVROS      | ros-humble-mavros / mavros-extras |
+| Vision      | YOLOv8-OBB + PyTorch + OpenCV ArUco |
+| Image Input | Custom `gz_image_republisher` (11.1절 참고) |
 
-원본 환경 가이드에는 Gazebo Garden 기준 내용도 포함되어 있으나, 현재 테스트 환경은 Gazebo Harmonic 계열입니다.
+**비전 스택 파이썬 패키지 버전은 반드시 고정할 것** (8.2절 참고):
 
-`ros_gz_image` / `ros_gz_bridge`에서 Gazebo image가 ROS Image로 정상 전달되지 않아, 현재는 커스텀 republisher 노드를 사용합니다.
+```bash
+pip install --user "numpy<2" "opencv-python==4.10.0.84"
+```
+
+원본 환경 가이드(`docs/environment_setup.md`)에는 Gazebo Garden/PX4 v1.14.x 기준 내용도 있으나, 현재 검증 환경은 PX4 main + Gazebo Harmonic입니다.
 
 ---
 
-## 2. Repository Structure
+## 3. Repository Structure
 
 ```text
 vtol-aam-rescue/
-├── px4_assets/
-│   ├── airframes/
-│   └── gz/
-│       ├── models/
-│       │   ├── v_marker/
-│       │   ├── box/
-│       │   ├── victim/
-│       │   ├── land_marker/
-│       │   └── survivor_tray/
-│       └── worlds/
-├── models/
-│   └── survivor_tray/
-├── ros2_ws/
-│   └── src/
-│       ├── krac_control/
-│       ├── krac_mission/
-│       ├── krac_utils/
-│       ├── krac_vision/
-│       ├── px4_msgs/
-│       └── px4_ros_com/
+├── px4_assets/                     # PX4 ROMFS/에어프레임/gz 모델 패치 원본
+│   └── gz/models/ (v_marker, land_marker, box, victim, survivor_tray, amsr_vtol ...)
+├── models/survivor_tray/
+├── ros2_ws/src/
+│   ├── krac_control/                # BT 런타임 (핵심 패키지)
+│   │   ├── bt/                      # BT XML 정의
+│   │   │   ├── krac_mission_bt_robust.xml   # 원본/기본 BT (way3.plan용)
+│   │   │   └── krac_mission_bt_krac24.xml   # krac24.plan 전용 BT 변형
+│   │   ├── config/
+│   │   │   ├── krac_bt_params.yaml          # 문서용 미러(런타임에 안 읽힘! 9.2절)
+│   │   │   └── krac_bt_params_krac24.yaml
+│   │   ├── include/krac_control/bt/bt_viewer.hpp
+│   │   ├── launch/krac_bt_runner.launch.py
+│   │   └── src/
+│   │       ├── krac_bt_runner.cpp           # BT 엔트리포인트
+│   │       ├── mission_context.cpp          # mavros 연동, 상태/토픽 캐시
+│   │       ├── bt_actions_*.cpp / bt_conditions.cpp / bt_register.cpp
+│   │       ├── bt_viewer.cpp                # SDL2 실시간 BT 뷰어
+│   │       ├── precision_lander.cpp         # 비전 기반 정밀 착륙 PID (10절 이슈 있음)
+│   │       ├── vtol_fsm_P.cpp / vtol_fsm.cpp / vtol_offboard.cpp  # 레거시/실험용, BT 경로 아님
+│   │       ├── mission_loader.py            # .plan 업로드
+│   │       ├── way3.plan                    # 기본 미션 (9항목)
+│   │       └── krac24.plan                  # 철현 원본 미션 (14+1항목)
+│   ├── krac_vision/krac_vision/vision_tracker.py   # YOLO-OBB + ArUco + 칼만필터
+│   ├── krac_mission/                # sitl_vtol.launch.py (PX4/mavros 기동)
+│   ├── krac_utils/                  # competition_logger 등
+│   ├── krac_interfaces/             # TargetError, FlightPhase 등 커스텀 msg
+│   ├── px4_msgs/, px4_ros_com/
 ├── scripts/
+│   ├── run_sitl_bt.sh               # ⭐ 메인 실행 스크립트 (BT 경로)
+│   ├── run_sitl.sh                  # 레거시 FSM 경로 (지금은 안 씀)
 │   ├── apply_px4_assets.sh
-│   ├── setup_ros2_ws.sh
-│   ├── run_sitl.sh
-│   ├── run_takeoff.sh
-│   ├── run_mission_from_wp1.sh
-│   ├── run_mission_direct_rescue.sh
-│   ├── auto_spawn.sh
+│   ├── auto_spawn.sh                # 마커/구조물 스폰 (REP 좌표 하드코딩, 8.4절)
 │   ├── run_gz_image_republisher.sh
-│   └── run_vision.sh
-├── docs/
-│   └── images/
-│       └── mission_demo.png
-└── logs/
-    └── competition/
+│   ├── run_vision_bt.sh
+│   ├── collect_bt_debug_logs.sh
+│   └── run_bt_debug.sh
+└── docs/                            # 세부 기록 (13절 색인 참고)
 ```
 
 ---
 
-## 3. Setup
+## 4. Setup
 
-### 3.1 Apply PX4 Assets
-
-커스텀 기체, world, marker, object model을 PX4 경로로 복사합니다.
+### 4.1 Apply PX4 Assets
 
 ```bash
 cd ~/vtol-aam-rescue
@@ -116,12 +124,10 @@ PX4 단독 실행 확인:
 
 ```bash
 cd ~/PX4-Autopilot
-make px4_sitl gz_amsr_vtol
+make px4_sitl gz_standard_vtol   # 또는 gz_amsr_vtol (커스텀 기체, GUI 검증은 아직 안 됨)
 ```
 
----
-
-### 3.2 Build ROS 2 Workspace
+### 4.2 Build ROS 2 Workspace
 
 ```bash
 cd ~/vtol-aam-rescue/ros2_ws
@@ -130,62 +136,18 @@ colcon build --symlink-install
 source install/setup.bash
 ```
 
-특정 패키지만 다시 빌드할 경우:
+패키지 단위로 빠르게 재빌드:
 
 ```bash
-colcon build --symlink-install --packages-select krac_mission
-colcon build --symlink-install --packages-select krac_utils
-colcon build --symlink-install --packages-select krac_vision
-colcon build --symlink-install --packages-select krac_control
+colcon build --symlink-install --packages-select krac_interfaces krac_control krac_utils krac_vision
 ```
 
----
+### 4.3 YOLO Weight
 
-## 4. Important Path Fixes
-
-원본 코드 일부에는 친구 PC 기준 경로(`/home/kch/...`)가 남아 있었습니다.
-
-현재 환경에서는 아래처럼 수정해야 합니다.
-
----
-
-### 4.1 Mission Plan Path
-
-파일:
+`.gitignore`의 `*.pt` 규칙 때문에 Git에 포함되지 않습니다. krac24 레포(또는 팀 공유 경로)에서 아래 위치로 직접 복사해야 합니다.
 
 ```text
-ros2_ws/src/krac_mission/launch/sitl_vtol.launch.py
-```
-
-수정 전:
-
-```python
-parameters=[{'plan_file': '/home/kch/ros2_ws/src/krac_control/src/way3.plan'}]
-```
-
-수정 후:
-
-```python
-parameters=[{'plan_file': '/home/boss/vtol-aam-rescue/ros2_ws/src/krac_control/src/way3.plan'}]
-```
-
-수정 후 빌드:
-
-```bash
-cd ~/vtol-aam-rescue/ros2_ws
-source /opt/ros/humble/setup.bash
-colcon build --symlink-install --packages-select krac_mission
-source install/setup.bash
-```
-
----
-
-### 4.2 YOLO Weight Path
-
-YOLO weight 파일 위치:
-
-```text
-~/vtol-aam-rescue/ros2_ws/src/krac_vision/weights/best.pt
+ros2_ws/src/krac_vision/weights/best.pt
 ```
 
 확인:
@@ -194,565 +156,275 @@ YOLO weight 파일 위치:
 find ~/vtol-aam-rescue -name "best.pt"
 ```
 
----
-
-## 5. Run Sequence
-
-아래 순서대로 터미널을 나누어 실행합니다.
+> 과거 원본 코드에 있던 `/home/kch/...` 절대경로 하드코딩(`plan_file`, weight 경로)은 이미 제거되어 `ament_index_python`(`get_package_share_directory`) 기반 package-share 상대경로로 바뀌어 있습니다. 새로 이런 하드코딩을 넣지 마세요.
 
 ---
 
-### Terminal 1 — PX4 + Gazebo + MAVROS + Mission Nodes
+## 5. Running the Mission — BT 경로 (기본, 권장)
+
+터미널 하나로 PX4 + Gazebo + MAVROS + gripper bridge + auto-spawn + 비전 + BT 런너까지 전부 기동합니다.
 
 ```bash
 cd ~/vtol-aam-rescue
-./scripts/run_sitl.sh
+source /opt/ros/humble/setup.bash
+source ros2_ws/install/setup.bash
+./scripts/run_sitl_bt.sh
 ```
 
-PX4 SITL, Gazebo Sim, MAVROS 및 기본 mission node를 실행합니다.
+로그는 `/tmp/krac_ros_logs/bt_run_<timestamp>/`에 남습니다 (연결 실패 시 `collect_bt_debug_logs.sh`가 자동으로 진단 로그를 모아줍니다).
 
-Gazebo에 `amsr_vtol_0` 기체가 나타나야 합니다.
+### 5.1 자주 쓰는 환경변수
 
-확인:
+| 변수 | 기본값 | 설명 |
+| --- | --- | --- |
+| `VEHICLE_MODEL` | `gz_standard_vtol` | `gz_amsr_vtol`로 바꾸면 커스텀 기체 (GUI 미검증) |
+| `GZ_MODEL_NAME` | `standard_vtol_0` | AMSR 사용 시 `amsr_vtol_0`로 같이 바꿀 것 |
+| `START_VISION_BT` | `true` | YOLO/torch 비전 스택 기동 여부. RAM 아끼려면 `false` |
+| `ENABLE_BT_VIEWER` | `false` | 실시간 BT 트리 뷰어 (5.3절) |
+| `BT_XML_PATH` / `BT_PARAMS_FILE` | (비어있음=way3.plan) | krac24.plan으로 전환 (5.2절) |
+| `MISSION_UPLOAD_STUB_SUCCESS` | `false` | true면 실제 업로드 없이 성공 처리 (BT 로직만 테스트할 때) |
+| `GRIPPER_STUB_SUCCESS` | `false` | true면 실제 서보 토픽 없이 그리퍼 성공 처리 |
+| `PRINT_BT_TRANSITIONS` | `true` | 터미널에 BT 상태 전이 로그 출력 |
+
+예: AMSR 기체로 비전 없이 빠르게 BT 로직만 확인
 
 ```bash
-gz topic -l | grep amsr_vtol
+VEHICLE_MODEL=gz_amsr_vtol GZ_MODEL_NAME=amsr_vtol_0 START_VISION_BT=false ./scripts/run_sitl_bt.sh
 ```
+
+### 5.2 미션 소스 전환: way3.plan ↔ krac24.plan
+
+| | way3.plan (기본) | krac24.plan |
+| --- | --- | --- |
+| 항목 수 | 9 | 14 + BT가 붙인 안전용 VTOL_LAND 1개 |
+| 좌표 출처 | SITL 월드(취리히) 기준 직접 작성 | 철현의 실제 대구 GPS 좌표를 SITL 원점 기준으로 재투영 |
+| BT XML | `krac_mission_bt_robust.xml` | `krac_mission_bt_krac24.xml` |
+| seq (rescue/resume/landing) | 1 / 2 / 7 | 6 / 7 / 13 (krac24 `vtol_fsm.cpp`의 파라미터 기본값 그대로 이식) |
+
+krac24.plan으로 실행:
+
+```bash
+BT_XML_PATH="$(ros2 pkg prefix krac_control)/share/krac_control/bt/krac_mission_bt_krac24.xml" \
+BT_PARAMS_FILE="$(ros2 pkg prefix krac_control)/share/krac_control/config/krac_bt_params_krac24.yaml" \
+./scripts/run_sitl_bt.sh
+```
+
+두 변수를 안 주면 완전히 기존과 동일하게 way3.plan으로 동작합니다 (회귀 없음). 자세한 배경/트러블슈팅 기록은 `~/workspace/hzy/krac24_mission_bt_run_guide.md` 참고 (레포 밖 세션 스크래치 문서 — 필요하면 `docs/`로 옮길 것).
+
+### 5.3 실시간 BT 트리 뷰어 실행법
+
+SDL2/SDL2_ttf 기반으로 현재 실행 중인 BT 트리를 그려주는 디버그 창입니다 (depth별 그리드 배치, 타원=Condition/사각형=Action, 상태별 색상).
+
+**의존성 (최초 1회):**
+
+```bash
+sudo apt install -y libsdl2-dev libsdl2-ttf-dev
+```
+
+**켜는 법 (`run_sitl_bt.sh` 사용 시, 권장):**
+
+```bash
+ENABLE_BT_VIEWER=true ./scripts/run_sitl_bt.sh
+```
+
+세로 배치 대신 가로로 보고 싶으면:
+
+```bash
+ENABLE_BT_VIEWER=true BT_VIEWER_DIRECTION=Horizontal ./scripts/run_sitl_bt.sh
+```
+
+**`ros2 launch`로 직접 켜는 법** (`krac_bt_runner`만 따로 띄울 때):
+
+```bash
+ros2 launch krac_control krac_bt_runner.launch.py enable_bt_viewer:=true bt_viewer_direction:=Vertical
+```
+
+**뷰어 조작법:**
+
+- 기본은 `auto_fit_ = true` — 창 크기에 맞춰 트리 전체가 자동으로 스케일됩니다.
+- 마우스 휠 / `+`,`-` 키: 수동 확대/축소 (이 순간 auto-fit 꺼짐)
+- 드래그: 화면 이동
+- `r` 키: auto-fit 다시 켜기 (수동 줌/이동 취소하고 트리 전체를 창에 맞춤)
+- 기본 창 크기 1500x1000. `DISPLAY`가 설정 안 돼 있으면(`run_sitl_bt.sh`가 자동 감지) 뷰어를 포함한 GUI 프로세스는 통째로 스킵됩니다.
 
 ---
 
-### Terminal 2 — QGroundControl
+## 6. 레거시 FSM 경로 (지금은 쓰지 않음)
 
-PX4 arming 및 mission 상태 확인을 위해 QGroundControl을 실행합니다.
-
-```bash
-~/QGroundControl.AppImage
-```
-
-실행 권한이 없을 경우:
-
-```bash
-chmod +x ~/QGroundControl.AppImage
-~/QGroundControl.AppImage
-```
-
-PX4 로그에 아래 메시지가 뜨면 정상입니다.
-
-```text
-INFO [mavlink] partner IP: 127.0.0.1
-INFO [commander] Ready for takeoff!
-```
+`run_sitl.sh` + `run_takeoff.sh` + `run_mission_from_wp1.sh` + `auto_spawn.sh` + `run_vision.sh`를 터미널 여러 개로 나눠 실행하던 예전 방식이 아직 스크립트로는 남아 있습니다. **현재 임무 제어는 전부 BT(`run_sitl_bt.sh`)로 이전되었고, 이 레거시 FSM(`vtol_fsm_P.cpp`)은 BT와 동시 실행하면 충돌하므로 함께 띄우지 마세요.** 참고가 필요하면 git 히스토리의 예전 README나 `docs/HANDOFF_2026-07-06.md`를 확인하세요.
 
 ---
 
-### Terminal 3 — Takeoff
+## 7. Useful ROS Topics
+
+| Topic | Description |
+| --- | --- |
+| `/image_raw` | Gazebo 카메라 → ROS Image (커스텀 republisher, 11.1절) |
+| `/vision/dbg_image` | YOLO/ArUco 탐지 결과 디버그 이미지 |
+| `/vision/target_error` | 정밀 착륙용 타겟 중심 오차 (`krac_interfaces/TargetError`) |
+| `/precision_lander/cmd_vel` | `precision_lander_node` 출력 속도 명령 (world/ENU frame으로 취급됨, 10절) |
+| `/precision_lander/enable` | 정밀 착륙 on/off 서비스 |
+| `/mavros/state` | PX4/MAVROS 연결·arming 상태 |
+| `/mavros/local_position/pose` | 로컬 포즈 (position + orientation) |
+| `/mavros/mission/reached` | 웨이포인트 도달 이벤트 (BT의 seq 트리거 기준) |
+| `/krac/mission_phase` | BT가 퍼블리시하는 현재 임무 단계 |
+
+디버그:
 
 ```bash
-cd ~/vtol-aam-rescue
-./scripts/run_takeoff.sh
-```
-
-VTOL 기체에 초기 이륙 명령을 보냅니다.
-
----
-
-### Terminal 4 — Run Mission from WP1
-
-```bash
-cd ~/vtol-aam-rescue
-./scripts/run_mission_from_wp1.sh
-```
-
-`way3.plan` 기반 waypoint mission을 WP1부터 실행합니다.
-
-Mission file:
-
-```text
-ros2_ws/src/krac_control/src/way3.plan
-```
-
----
-
-### Terminal 4.5 — Stop Legacy FSM
-
-```bash
-cd ~/vtol-aam-rescue
-pkill -f vtol_fsm_P || true
-```
-
-현재 철현님 코드 기반의 기존 FSM waypoint / landing 로직과 최신 mission waypoint 구성이 완전히 맞지 않는 부분이 있습니다.
-
-따라서 REP / landing 부분은 임시로 제외하고, 추후 High-Level Behavior Tree로 교체할 예정입니다.
-
-현재 이 명령어를 사용하는 이유는 다음과 같습니다.
-
-```text
-- 기존 FSM의 REP / landing 동작 충돌 방지
-- waypoint 기반 mission 흐름 안정화
-- REP 접근, 구조, 착륙 로직을 별도 모듈로 분리하기 위한 준비
-```
-
----
-
-### Terminal 5 — Spawn Mission Objects
-
-```bash
-cd ~/vtol-aam-rescue
-./scripts/auto_spawn.sh
-```
-
-Gazebo 월드에 mission object를 스폰합니다.
-
-정상 실행 시 Gazebo Entity Tree에 아래 객체들이 생성됩니다.
-
-```text
-v_marker
-rescue_box
-victim
-drop_marker
-survivor_tray_rep
-```
-
-`survivor_tray_rep`는 REP 구역에서 구조 및 착륙 대상으로 사용되는 트레이 모델입니다.
-
-확인:
-
-```bash
-timeout 3 gz topic -e -t /world/default/pose/info | grep -E 'name: "(rescue_box|victim|drop_marker|survivor_tray_rep)"'
-```
-
----
-
-### Terminal 6 — Gazebo Camera to ROS Image
-
-기존 `ros_gz_image` / `ros_gz_bridge` 방식 대신 커스텀 republisher를 사용합니다.
-
-```bash
-cd ~/vtol-aam-rescue
-./scripts/run_gz_image_republisher.sh
-```
-
-확인:
-
-```bash
-ros2 topic hz /image_raw
-```
-
-현재 우회 방식은 `gz topic`을 subprocess로 호출하는 구조이므로 약 0.5~1.5 Hz 수준입니다.
-
----
-
-### Terminal 7 — YOLO Vision Node
-
-```bash
-cd ~/vtol-aam-rescue
-./scripts/run_vision.sh
-```
-
-정상 로그 예시:
-
-```text
-YOLOv8 Model loaded
-Detected: vertiport
-Detected: basket
-```
-
----
-
-### Terminal 8 — Set YOLO Target
-
-YOLO 탐지 대상을 설정합니다.
-
-전체 대상을 탐지하려면 다음 명령어를 실행합니다.
-
-```bash
-cd ~/vtol-aam-rescue/ros2_ws
-ros2 topic pub --once /camera/set_target std_msgs/msg/String "{data: 'all'}"
-```
-
-특정 대상만 탐지하려면 `all` 대신 target class를 입력합니다.
-
-예시:
-
-```bash
-ros2 topic pub --once /camera/set_target std_msgs/msg/String "{data: 'basket'}"
-```
-
-탐지를 끄려면:
-
-```bash
-ros2 topic pub --once /camera/set_target std_msgs/msg/String "{data: 'off'}"
-```
-
----
-
-### Terminal 9 — Debug Image Viewer
-
-```bash
-cd ~/vtol-aam-rescue
-ros2 run rqt_image_view rqt_image_view /dbg_image
-```
-
-YOLO bounding box와 target 상태가 표시된 debug image를 확인합니다.
-
-`rqt_image_view`가 설치되어 있지 않다면:
-
-```bash
-sudo apt install -y ros-humble-rqt-image-view
-```
-
-또는 기존 `image_view` 패키지를 사용할 수 있습니다.
-
-```bash
-ros2 run image_view image_view --ros-args -r image:=/dbg_image
-```
-
----
-
-### Optional — Direct Rescue Test
-
-WP1~WP5 전체 경로를 생략하고 REP / 구조 구역부터 빠르게 테스트할 때 사용합니다.
-
-```bash
-cd ~/vtol-aam-rescue
-./scripts/run_mission_direct_rescue.sh
-```
-
-주의:
-
-```text
-이 스크립트는 way3.plan을 direct rescue 테스트용으로 임시 수정합니다.
-기본 mission plan으로 커밋할지 여부는 확인 후 결정해야 합니다.
-```
-
-현재 `way3.plan`이 direct rescue 테스트용 상태인지 확인하려면:
-
-```bash
-grep -nE "REP_DIRECT|REP_DESCEND|REP_HOLD|REP_TAKEOFF" \
-ros2_ws/src/krac_control/src/way3.plan
-```
-
----
-
-## 6. Useful ROS Topics
-
-| Topic                            | Description                                  |
-| -------------------------------- | -------------------------------------------- |
-| `/image_raw`                     | Gazebo camera image republished as ROS Image |
-| `/dbg_image`                     | YOLO bounding box debug image                |
-| `/detections`                    | YOLO detection result                        |
-| `/camera/target_error`           | Target center error for visual servoing      |
-| `/camera/set_target`             | Target class command                         |
-| `/mavros/state`                  | PX4/MAVROS connection and arming state       |
-| `/mavros/local_position/pose`    | Local position                               |
-| `/mavros/global_position/global` | GPS position                                 |
-| `/mavros/mission/waypoints`      | Uploaded mission waypoints                   |
-
-확인 명령어:
-
-```bash
-ros2 topic hz /image_raw
-ros2 topic hz /dbg_image
-ros2 topic echo /detections --once
-ros2 topic echo /camera/target_error --once
 ros2 topic echo /mavros/state --once
-ros2 topic echo /mavros/local_position/pose --once
-ros2 topic echo /mavros/mission/waypoints --once
+ros2 topic echo /vision/target_error --once
+ros2 topic echo /mavros/mission/reached
+gz topic -l | grep vtol
 ```
 
----
-
-## 7. Takeoff
-
-PX4가 아래 상태여야 이륙 가능합니다.
-
-```text
-connected: true
-armed: false
-mode: AUTO.LOITER
-```
-
-QGC 연결 후 PX4 로그에 아래 문구가 떠야 합니다.
-
-```text
-Ready for takeoff!
-```
-
-PX4 shell을 직접 사용할 수 있는 경우:
-
-```text
-pxh> commander arm -f
-pxh> commander takeoff
-```
-
-주의:
-
-```text
-Disarmed by auto preflight disarming
-```
-
-이 로그가 뜨면 arm 후 takeoff 명령이 늦게 들어가 자동 disarm된 것입니다.
-
-`commander arm -f` 직후 바로 `commander takeoff`를 실행해야 합니다.
-
-MAVROS service 방식:
+미션 강제 진행(대기 중인 액션을 넘기고 싶을 때):
 
 ```bash
-ros2 service call /mavros/cmd/arming mavros_msgs/srv/CommandBool "{value: true}"
-ros2 service call /mavros/set_mode mavros_msgs/srv/SetMode "{base_mode: 0, custom_mode: 'AUTO.TAKEOFF'}"
-```
-
-단, MAVROS arming service는 PX4 shell의 `commander arm -f`처럼 force arm을 수행하지 못합니다.
-
-PX4 health check가 실패하면 `success=False`가 반환됩니다.
-
----
-
-## 8. Mission Upload
-
-Mission file:
-
-```text
-ros2_ws/src/krac_control/src/way3.plan
-```
-
-Mission loader:
-
-```text
-ros2_ws/src/krac_control/src/mission_loader.py
-```
-
-정상 로그:
-
-```text
-Uploading 7 items from .plan file...
-WP: mission sended
-Mission Upload SUCCESS!
-```
-
-주의:
-
-```text
-Mission Upload SUCCESS
-```
-
-는 미션이 PX4로 업로드되었다는 뜻이지, 기체가 자동으로 이륙해서 미션을 시작했다는 뜻은 아닙니다.
-
-별도로 아래 조건이 필요합니다.
-
-```text
-GCS connection
-Preflight check pass
-Arming
-Takeoff or AUTO.MISSION start
+ros2 service call /cmd/mission_proceed std_srvs/srv/Trigger
 ```
 
 ---
 
-## 9. Survivor Tray Model
+## 8. Known Issues (인수인계 시 반드시 읽을 것)
 
-REP 구조 구역에는 `survivor_tray_rep` 모델을 추가했습니다.
+### 8.1 ⚠️ Gazebo 메모리 폭주 — 매 실행마다 OOM 직전까지 감
 
-이 모델은 조난자 구조 및 landing target 테스트를 위해 사용됩니다.
+`gz sim`(커널 로그상 `ruby` 프로세스, gz CLI가 루비 래퍼라서)이 미션 하나 도는 동안(~15분) RSS가 계속 증가해 22GB RAM + 11GB zram swap을 거의 다 채웁니다. 비전 스택(`START_VISION_BT=false`)을 꺼도 마찬가지로 임계치까지 감 — 근본 원인(렌더링 파이프라인 누수 추정)은 아직 못 찾음.
 
-기본 모델 경로:
+- `run_sitl_bt.sh`의 EXIT trap은 `make px4_sitl`이 spawn한 `gz sim`/`gz sim -g` grandchild 프로세스까지는 못 죽입니다.
+- **매 실행 후 반드시 확인:**
+  ```bash
+  pgrep -af "gz sim"
+  ```
+  남아있으면 PID로 직접 `kill -9`. 안 하면 다음 실행이 바로 OOM으로 죽습니다.
+- 실제로 커널 OOM killer가 `gz sim`을 강제 종료한 사례 확인됨 (`journalctl -k | grep oom`).
 
-```text
-models/survivor_tray/
-├── model.config
-├── model.sdf
-└── meshes/
-    └── survivor_tray.stl
-```
+### 8.2 numpy2 / cv_bridge ABI 불일치
 
-Gazebo에서 실제로 스폰되는 모델은 아래 경로에 복사되어 있습니다.
-
-```text
-px4_assets/gz/models/survivor_tray/
-```
-
-`auto_spawn.sh` 실행 시 REP 위치에 `survivor_tray_rep`가 생성됩니다.
-
----
-
-## 10. Competition GPS Log
-
-GPS 로그는 아래 위치에 저장됩니다.
-
-```text
-~/vtol-aam-rescue/logs/competition/
-```
-
-CSV 형식:
-
-```text
-Auto_Manual,Event_Flag,GPS_Time,Latitude,Longitude,Altitude
-```
-
-관련 코드:
-
-```text
-ros2_ws/src/krac_utils/src/competition_logger.cpp
-```
-
-확인:
+`pip install --user opencv-python`을 그냥 설치하면 numpy 2.x가 딸려 들어와서 apt로 깔린 `cv_bridge`(numpy1 ABI로 빌드됨)가 `AttributeError: _ARRAY_API not found`로 즉시 죽습니다 (`yolo_node`/`vision_tracker` 첫 프레임에서 세그폴트). 반드시:
 
 ```bash
-ls -lh ~/vtol-aam-rescue/logs/competition
+pip install --user "numpy<2" "opencv-python==4.10.0.84"
 ```
+
+### 8.3 PX4 미션 아이템 파라미터 검증이 엄격함
+
+이 머신의 PX4(main 브랜치, `src/modules/mavlink/mavlink_command_params.hpp`)는 mission-item마다 허용되는 파라미터 마스크를 엄격히 검사합니다.
+
+- `VTOL_LAND`(command 85) mission-item은 `param1~3`이 반드시 0이어야 함 (0이 아니면 `param3 has an invalid value`로 업로드 자체가 거부됨 — mission-item에서는 어차피 안 읽는 값이라 기능 손실 없음).
+- `frame=2`(`MAV_FRAME_MISSION`, 좌표 없는 DO 계열) 항목은 좌표를 절대 재투영하지 말고 0으로 채울 것. krac24.plan 원본에 있던 placeholder 좌표(35, 128)를 그대로 재투영해서 올렸다가 `param5 has an invalid value`로 거부당한 사례 있음.
+- 미션 마지막에 착륙 아이템(`MAV_CMD_NAV_VTOL_LAND`)이 없으면 `mission_feasibility_checker`가 "Landing waypoint/pattern required"로 미션 자체를 거부해 arm이 안 됩니다 (krac24.plan은 원본에 이게 없어서, BT용 사본 끝에 추가해둠).
+
+### 8.4 QGroundControl 없이 실행하면 arm이 거부됨
+
+`NAV_DLL_ACT > 0`이면 PX4 `rcAndDataLinkCheck`가 GCS 연결을 요구합니다 (mavros는 companion computer라 이 조건을 못 채움). `run_sitl_bt.sh`가 MAVROS 연결 직후 `NAV_DLL_ACT=0`을 자동으로 설정해서 이미 해결돼 있습니다 (way3.plan/krac24.plan 둘 다 적용됨). 직접 다른 launch로 띄울 때는 이 파라미터를 잊지 마세요.
+
+### 8.5 QGroundControl 웨이포인트가 안 보임 (Cosmetic)
+
+mavros가 컴패니언 컴퓨터로서 미션을 업로드해도 QGC는 최초 연결 시점에만 미션 리스트를 자동 요청합니다. 업로드 후 Plan 탭을 재진입하거나 재연결해야 최신 웨이포인트가 보입니다 — 미션이 깨진 게 아닙니다.
+
+### 8.6 `krac_bt_params*.yaml`이 실제로는 안 읽힘 (설계상 함정)
+
+`krac_bt_params.yaml`/`krac_bt_params_krac24.yaml`의 `rescue_wp_seq`/`resume_wp_seq`/`landing_wp_seq`는 **문서용 미러일 뿐, BT 노드가 실제로 읽지 않습니다.** `WaitForWaypointReached`/`AlignHeadingToWaypoint`/`SetMissionCurrentWaypoint`는 각 BT XML(`krac_mission_bt_robust.xml` / `krac_mission_bt_krac24.xml`)에 **리터럴로 박힌 `seq="..."` 속성값**을 그대로 씁니다. `mission_context.cpp`에 `rescueWpSeq()` 같은 접근자가 있지만 아무도 호출 안 함.
+
+**→ .plan 파일의 항목 순서/개수를 바꾸면 반드시 해당 BT XML의 `seq=` 값도 같이 수정해야 합니다.** yaml만 고치고 XML을 안 고치면 아무 효과 없이 조용히 틀린 웨이포인트를 기다리게 됩니다.
+
+### 8.7 `auto_spawn.sh`의 REP 좌표가 미션별로 하드코딩됨
+
+`scripts/auto_spawn.sh`는 REP(구조 지점) 마커를 스폰할 때 home 기준 (east, north) 오프셋이 필요한데, 이게 plan 파일에서 자동 계산되는 게 아니라 수동으로 맞춰둔 값입니다. `run_sitl_bt.sh`가 `BT_XML_PATH`에 `"krac24"`가 들어있으면 `AUTO_SPAWN_REP_E=-26.03`/`AUTO_SPAWN_REP_N=-31.41`로 자동 전환해주지만, **새로운 세 번째 미션 변형을 추가한다면 이 자동 전환 로직도 같이 늘려야 합니다** (`AUTO_SPAWN_REP_E`/`AUTO_SPAWN_REP_N` 환경변수로 직접 오버라이드도 가능).
+
+`v_marker`(비전 인식용 fiducial, 출발/버티포트용)와 `land_marker`(적십자, 구조 지점용)는 과거 서로 반대 위치에 스폰되던 버그가 있었고 수정 완료됨 — 새 월드/모델을 추가할 때 이 매핑이 다시 꼬이지 않았는지 확인할 것.
 
 ---
 
-## 11. Known Issues
-
-### 11.1 ros_gz_image / ros_gz_bridge Image Problem
-
-Gazebo camera topic은 정상적으로 frame을 publish합니다.
+## 9. 아키텍처 개요
 
 ```text
-/world/default/model/amsr_vtol_0/link/camera_link/sensor/camera/image
+run_sitl_bt.sh
+├── PX4 SITL + Gazebo (via krac_mission/sitl_vtol.launch.py, start_fsm:=false)
+├── MAVROS
+├── gripper servo bridge (ros_gz_bridge, /model/<name>/servo_4~6)
+├── auto_spawn.sh            → Gazebo에 마커/구조물 스폰
+├── run_gz_image_republisher.sh → Gazebo 카메라 → /image_raw
+├── run_vision_bt.sh         → vision_tracker.py (YOLO-OBB + ArUco + 칼만필터)
+│                               → /vision/target_error
+├── precision_lander_node    → /vision/target_error 구독, /precision_lander/cmd_vel 발행
+└── krac_bt_runner           → mission_context.cpp가 mavros 상태/토픽을 캐시,
+                                bt_actions_*.cpp/bt_conditions.cpp가 BT 노드 구현,
+                                BT XML(way3 or krac24)이 실제 흐름 정의
 ```
 
-Gazebo 원본 확인:
+핵심 파일 하나만 봐야 한다면:
 
-```bash
-timeout 3 gz topic -e -t /world/default/model/amsr_vtol_0/link/camera_link/sensor/camera/image | grep -E "width|height|pixel_format|step"
-```
-
-정상 예시:
-
-```text
-width: 640
-height: 480
-step: 1920
-pixel_format_type: RGB_INT8
-```
-
-하지만 현재 Gazebo Harmonic 환경에서는 `ros_gz_image` 또는 `ros_gz_bridge` 사용 시 `/image_raw` 토픽은 생성되지만 실제 frame이 흐르지 않는 문제가 있었습니다.
-
-실패 예시:
-
-```bash
-ros2 topic info /image_raw
-# Publisher count: 1
-
-ros2 topic hz /image_raw
-# no output
-```
-
-해결:
-
-```bash
-ros2 run krac_vision gz_image_republisher
-```
-
-현재 이 노드는 `gz topic`을 subprocess로 호출해 이미지를 가져오므로 약 0.5~1.5 Hz 수준입니다.
-
-시뮬레이션 검증용 workaround이며, Jetson 배포용 구조는 아닙니다.
+- 임무 흐름/순서: `ros2_ws/src/krac_control/bt/krac_mission_bt_*.xml`
+- BT 노드 구현: `ros2_ws/src/krac_control/src/bt_actions_*.cpp`, `bt_conditions.cpp`
+- mavros/토픽 상태 관리: `ros2_ws/src/krac_control/src/mission_context.cpp`
+- 정밀 착륙 제어 (현재 이슈 있음): `ros2_ws/src/krac_control/src/precision_lander.cpp`
 
 ---
+
+## 10. ⚠️ 정밀 착륙(Precision Landing) 미해결 이슈 — 다음 작업 최우선
+
+**현재 상태**: `krac_mission_bt_krac24.xml`의 `RescueOperationAttempt`/`FinalLandingAttempt`는 스텁(`DeactivateYOLO`+고정 고도 홀드)이 아니라 **실제 비전 파이프라인**(`ActivateYOLO` → `WaitForPrecisionTarget` → `EnablePrecisionLander` → `PrecisionLandOnTarget`)으로 복원되어 있는 상태입니다. YOLO-OBB 탐지 자체는 정상 동작합니다.
+
+**증상**: SITL 실측(`START_VISION_BT=true`)에서 OFFBOARD 진입 시 초기 오차가 13m로 매우 컸고, PID가 처음엔 오차를 줄였지만(14.8m → 6.6m, ~40초) 이후 다시 발산(6.6m → 11m+)해 60초 타임아웃 후 타겟을 완전히 잃고, 이 시점 근처에서 SITL 자체가 죽는 패턴이 반복 재현됨.
+
+**원인 진단 (코드 레벨로 확인 완료, 아직 미수정)**: `precision_lander.cpp`의 버그입니다. BT 시퀀싱 문제가 아닙니다.
+
+1. `vision_tracker.py`가 계산하는 `pixel_err_x/y`는 기체에 고정된(짐벌 없음) 하방 카메라 기준 오차 → **기체 body frame**. 기체가 yaw 회전하면 이 오차의 "앞/뒤/좌/우" 의미도 같이 회전함.
+2. `precision_lander.cpp::control_loop()`(45~138행)는 이 body-frame 오차로 `v_x`/`v_y`를 계산해서 부호만 한 번 바꾸는 임시방편(`-v_y`)을 거쳐 그대로 `/precision_lander/cmd_vel`로 내보냅니다. **현재 yaw를 전혀 읽지 않음** — `pose_cb()`(73~75행)는 orientation 없이 `position.z`만 뽑아 씀.
+3. 이 토픽은 `mission_context.cpp::precisionLanderVelCb()`를 거쳐 그대로 `mavros/setpoint_velocity/cmd_vel_unstamped`로 전달되는데, 이 토픽은 이 코드베이스 전체 관례상 **world/ENU frame**으로 쓰입니다 (같은 파일의 `FlyToLocalPoint`가 world-frame dx/dy를 그대로 이 토픽에 보내는 것으로 확인). `mission_context.cpp::currentYaw()`가 이미 구현돼 있어서 다른 BT 노드(`AlignHeadingToWaypoint`)는 이걸 정상적으로 씀.
+4. 즉 **body-frame 오차를 회전 변환 없이 world-frame 속도 명령처럼 보내고 있음.** `precision_lander.cpp`는 동시에 마커 각도에 맞춰 yaw도 능동적으로 돌리므로(`KP_YAW`, 90도 스냅), 하강 초반엔 헤딩이 우연히 맞아 수렴하다가, 정렬을 위해 기체가 실제로 회전하는 순간부터 world-frame으로 잘못 해석된 보정 벡터가 엉뚱한 방향을 가리켜 다시 발산 — 실측 로그 패턴과 정확히 일치.
+
+**다음 작업자가 할 일 (우선순위 순):**
+
+1. `precision_lander.cpp`의 `pose_cb`가 orientation도 구독하도록 하고, `mission_context.cpp::currentYaw()`와 동일한 방식으로 yaw를 추출.
+2. `err_x_m`/`err_y_m`(122행 부근)을 world-frame으로 내보내기 전에 현재 yaw만큼 2D 회전행렬로 회전시킬 것. 지금의 `-v_y` 부호 반전 핫픽스는 이 회전을 대체하지 못하고, 헤딩이 바뀔 때마다 다시 어긋남.
+3. 수정 후 `START_VISION_BT=true`로 재검증 (krac24.plan 기준 `krac24_run_11+`). 성공 기준: REP 도착 후 오차가 단조 감소해 `PrecisionLandOnTarget`의 `target_altitude_m` 임계값(0.8m/0.25m) 도달.
+4. 그래도 초기 13m 오차 자체가 너무 크다면, OFFBOARD 진입 전 미션 도달 허용오차(REP 웨이포인트 근처)를 더 타이트하게 좁히는 것도 병행 검토.
+5. 확실히 성공하는 데모가 급하면 임시로 스텁(`DeactivateYOLO`+`FlyToAltitude(hold_latlon=true)`+`Delay`)으로 되돌리는 것도 옵션 — 이전 텍스트는 git 히스토리에 남아 있음.
+
+BT 뷰어 auto-fit(5.3절)와 마커 위치 수정(8.7절)은 이 이슈와 무관하게 이미 안정적으로 동작 확인됨.
+
+---
+
+## 11. 기타 알려진 이슈
+
+### 11.1 ros_gz_image / ros_gz_bridge 이미지 미전달
+
+Gazebo Harmonic 환경에서 `ros_gz_image`/`ros_gz_bridge`로 브리지하면 `/image_raw` 토픽은 생기지만 프레임이 흐르지 않는 문제가 있어, `gz topic`을 subprocess로 호출하는 커스텀 republisher(`scripts/run_gz_image_republisher.sh`)를 대신 씁니다. 약 0.5~1.5Hz 수준이며 시뮬레이션 검증용 workaround입니다 (Jetson 배포 구조 아님, 12절 참고).
 
 ### 11.2 YOLO Always-On Load
 
-현재 YOLO는 `/image_raw`가 들어올 때마다 계속 inference를 수행합니다.
+현재 YOLO는 `/image_raw`가 들어올 때마다 계속 inference를 수행합니다. 실기체(Jetson)에서는 rescue waypoint 도착 시에만 활성화하는 구조가 적합합니다 (`/camera/set_target`으로 on/off 제어하는 인터페이스는 이미 있음).
 
-Jetson Nano에서는 전체 비행 구간에서 YOLO를 계속 실행하기보다, goal point 또는 rescue waypoint에 도착했을 때만 inference를 활성화하는 구조가 적합합니다.
+### 11.3 Public repo 주의
 
-추천 구조:
-
-```text
-PX4 AUTO.MISSION
-→ rescue waypoint 도착
-→ BT/FSM에서 /camera/set_target publish
-→ YOLO inference 활성화
-→ target_error 기반 정밀 제어
-→ 작업 완료 후 inference 비활성화
-```
-
-향후 개선 방향:
-
-```text
-YOLO node는 계속 실행
-target이 off이면 inference skip
-/camera/set_target = victim / basket / vertiport / off 로 동작 제어
-```
-
----
-
-### 11.3 Legacy FSM and Updated Waypoint Mismatch
-
-현재 철현님 코드 기반의 기존 FSM waypoint / landing 로직과 최신 mission waypoint 구성이 완전히 일치하지 않는 문제가 있습니다.
-
-따라서 REP / landing 구간은 임시로 분리하여 테스트 중이며, 필요 시 아래 명령어로 기존 FSM을 종료합니다.
-
-```bash
-pkill -f vtol_fsm_P || true
-```
-
-이 부분은 추후 Behavior Tree 기반의 상위 미션 제어기로 교체할 예정입니다.
-
----
-
-### 11.4 Direct Rescue Test Plan
-
-`run_mission_direct_rescue.sh`는 WP1~WP5를 생략하고 REP / 구조 구역부터 빠르게 테스트하기 위한 스크립트입니다.
-
-단, 이 스크립트는 `way3.plan`을 direct rescue 테스트용으로 수정할 수 있습니다.
-
-따라서 기본 미션 플랜으로 커밋하기 전에 아래 명령어로 현재 plan 상태를 확인해야 합니다.
-
-```bash
-grep -nE "REP_DIRECT|REP_DESCEND|REP_HOLD|REP_TAKEOFF" \
-ros2_ws/src/krac_control/src/way3.plan
-```
+원본 handoff 자료에 Roboflow API 키가 담긴 문서가 있었습니다. 그 문서/키는 커밋하지 마세요.
 
 ---
 
 ## 12. Jetson Nano Deployment Note
 
-Jetson Nano에서는 Gazebo image bridge를 사용할 필요가 없습니다.
-
-실기체 / 온보드 환경에서는 실제 CSI / USB 카메라를 직접 사용합니다.
-
-권장 구조:
-
-```text
-USB/CSI Camera
-→ Jetson YOLO node
-→ /camera/target_error
-→ MAVROS/PX4 companion control
-```
-
-시뮬레이션용 `gz_image_republisher`는 Jetson 배포용 노드가 아니라, Gazebo camera bridge 문제를 우회하기 위한 테스트용 노드입니다.
-
-Jetson에서 비교해야 할 대상:
-
-```text
-YOLOv8 PyTorch FPS
-ONNX FPS
-TensorRT FPS
-input resolution 640x480 vs 320x240
-target_error publish rate
-```
+Jetson에서는 Gazebo image bridge가 필요 없습니다. 실제 CSI/USB 카메라 → Jetson YOLO node → `/camera/target_error` → MAVROS/PX4 companion control 구조를 그대로 쓰면 됩니다. 비교해봐야 할 것: YOLOv8 PyTorch vs ONNX vs TensorRT FPS, 입력 해상도 640x480 vs 320x240, `target_error` publish rate.
 
 ---
 
-## 13. Future Work
+## 13. 문서 색인 (docs/)
 
-향후 REP 접근, 구조 대상 정렬, 착륙, 재이륙, 복귀 로직은 High-Level Behavior Tree 기반으로 모듈화할 예정입니다.
+| 파일 | 내용 |
+| --- | --- |
+| `docs/HANDOFF_2026-07-06.md` | FSM→BT 전환 배경, 핵심 변경 요약 |
+| `docs/RUN_COMMANDS.md` | 설치 후 바로 쓰는 명령어 모음 |
+| `docs/krac24_integration.md` | krac24 FSM → BT 이식 설계 기록 |
+| `docs/code_map.md` | 주요 코드 위치 |
+| `docs/known_issues.md` | 초기 클린업 체크리스트 (일부는 이미 해결됨) |
+| `docs/standard_vtol_bt_test_summary_2026-07-05.md` | standard VTOL BT 테스트 요약 |
+| `docs/standard_vtol_bt_gripper_full_validation_2026-07-06.md` | 그리퍼 포함 full validation 기록 |
+| `docs/test_sequence.md` | 점검 명령 모음 |
+| `docs/environment_setup.md` | 환경 설치 가이드 (PX4 버전 표기가 현재와 다를 수 있음) |
 
-예상 BT 구조는 다음과 같습니다.
+세션 스크래치 문서(레포 밖, `~/workspace/hzy/`)도 참고 가치가 있습니다 — 필요하면 `docs/`로 옮겨서 커밋하는 것을 권장합니다.
 
-```text
-MissionRoot
-└── Sequence
-    ├── Takeoff
-    ├── FollowWaypointsToREP
-    ├── ApproachSurvivorTray
-    ├── AlignToTarget
-    ├── LandAtREP
-    ├── WaitForRescue
-    ├── TakeoffAgain
-    ├── ReturnWaypoints
-    └── FinalLand
-```
+- `krac24_mission_bt_run_guide.md`: krac24.plan BT 변형의 전체 트러블슈팅 기록 (좌표 재투영, seq 근거, PX4 파라미터 검증 이슈 등 8절 내용의 원본).

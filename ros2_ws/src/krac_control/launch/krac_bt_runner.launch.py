@@ -21,6 +21,8 @@ def generate_launch_description():
         DeclareLaunchArgument('sim_bypass', default_value='true'),
         DeclareLaunchArgument('mission_upload_stub_success', default_value='false'),
         DeclareLaunchArgument('gripper_stub_success', default_value='false'),
+        DeclareLaunchArgument('enable_bt_viewer', default_value='false'),
+        DeclareLaunchArgument('bt_viewer_direction', default_value='Vertical'),
         Node(
             package='krac_control',
             executable='krac_bt_runner',
@@ -37,6 +39,8 @@ def generate_launch_description():
                     'sim_bypass': LaunchConfiguration('sim_bypass'),
                     'mission_upload_stub_success': LaunchConfiguration('mission_upload_stub_success'),
                     'gripper_stub_success': LaunchConfiguration('gripper_stub_success'),
+                    'enable_bt_viewer': LaunchConfiguration('enable_bt_viewer'),
+                    'bt_viewer_direction': LaunchConfiguration('bt_viewer_direction'),
                 }
             ],
         )

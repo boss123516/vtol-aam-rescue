@@ -4,11 +4,14 @@ set -e
 WORLD_NAME="${WORLD_NAME:-default}"
 MODEL_ROOT="$HOME/vtol-aam-rescue/px4_assets/gz/models"
 
-# way3.plan 기준:
-# REP amsr_local_offset_ne_m = [N, E] = [35.0, 130.0]
-# Gazebo spawn 좌표는 x=E, y=N 으로 사용
-REP_X=130.0
-REP_Y=35.0
+# REP local offset relative to plannedHomePosition, in Gazebo x=E, y=N.
+# Defaults are way3.plan's REP_DIRECT offset (unchanged default behavior).
+# krac24.plan's REP sits at a different local offset (east=-26.03, north=-31.41,
+# computed from krac24.plan's own plannedHomePosition) — run_sitl_bt.sh exports
+# AUTO_SPAWN_REP_E/AUTO_SPAWN_REP_N automatically when BT_XML_PATH selects the
+# krac24 BT variant, so this script doesn't need to know which plan is active.
+REP_X="${AUTO_SPAWN_REP_E:-130.0}"
+REP_Y="${AUTO_SPAWN_REP_N:-35.0}"
 
 HOME_X=0.0
 HOME_Y=0.0
@@ -46,11 +49,14 @@ ls "$MODEL_ROOT/victim/model.sdf" >/dev/null
 ls "$MODEL_ROOT/survivor_tray/model.sdf" >/dev/null
 
 echo ">> Spawn order: after takeoff, marker targets first, rescue props at the REP point."
-spawn_model "home landing marker" "$MODEL_ROOT/land_marker/model.sdf" "land_marker_home" "$HOME_X" "$HOME_Y" "0.02"
+# v_marker (fiducial/vision target) marks the vertiport/home (start+destination);
+# land_marker (red-cross rescue symbol) marks the REP (victim rescue site) —
+# these were previously swapped.
+spawn_model "home/vertiport vision marker" "$MODEL_ROOT/v_marker/model.sdf" "v_marker_home" "$HOME_X" "$HOME_Y" "0.02"
 
 sleep 1
 
-spawn_model "REP visual target marker" "$MODEL_ROOT/v_marker/model.sdf" "v_marker_rep" "$REP_X" "$REP_Y" "0.35"
+spawn_model "REP rescue marker" "$MODEL_ROOT/land_marker/model.sdf" "land_marker_rep" "$REP_X" "$REP_Y" "0.35"
 
 sleep 1
 

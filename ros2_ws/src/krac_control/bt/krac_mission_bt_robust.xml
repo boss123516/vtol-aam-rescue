@@ -7,6 +7,10 @@
   seq0 TAKEOFF_HOME_DIRECT_RESCUE, seq1 REP_DIRECT,
   seq2~6 WP5~1_BACK, seq7 HOME_RETURN,
   seq8 HOME_VTOL_LAND(PX4 mission feasibility/safety net).
+  주의: 이 seq 값들은 아래 노드에 리터럴로 박혀 있음 (WaitForWaypointReached/
+  AlignHeadingToWaypoint/SetMissionCurrentWaypoint) — krac_bt_params.yaml의
+  rescue_wp_seq/resume_wp_seq/landing_wp_seq는 이 노드들에서 실제로 읽히지
+  않으므로, way3.plan을 바꿀 때는 반드시 이 XML의 seq도 같이 갱신할 것.
   krac_bt_params.yaml 의 동일 이름 파라미터(rescue_wp_seq, resume_wp_seq, landing_wp_seq,
   safe_ascend_alt)와 반드시 일치시킬 것. REP 저고도/재상승은 PX4 mission item에서
   제거했고 BT OFFBOARD 정밀착륙/재상승으로만 수행한다. way3.plan에는 드롭존 웨이포인트가 없으므로
@@ -156,6 +160,28 @@
   <!--
     krac24 vtol_fsm.cpp(프록시 FSM) 이식: mission-plan 비행 중 이 지점에서만 OFFBOARD로 개입해
     precision_lander(정밀 PID+yaw 정렬, TargetError 기반)에 착륙/픽업을 위임한다.
+
+    2026-07-07 YOLO 미구현 임시 스텁: 실제 vision_tracker(YOLO-OBB) 모델이 아직 없어서
+    WaitForPrecisionTarget가 영원히 fresh 해지지 않아 항상 타임아웃하던 문제를 우회함.
+    아래에서 뺀 정밀정렬 3줄(WaitForPrecisionTarget/EnablePrecisionLander/PrecisionLandOnTarget)
+    대신 고도만 보고 내려가서 5초 hold 후 그리퍼를 닫는 방식으로 대체했다. 실제 YOLO가 붙으면
+    FlyToAltitude+Delay 두 줄을 지우고 원래 3줄(target_altitude_m="0.8" 기준)로 되돌릴 것.
+
+    2026-07-07 실기 테스트 중 REP에서 지면 충돌 발견: target_altitude_m을 원래 0.8로 뒀더니
+    krac_bt_runner 로그(RecoverVisionLanding started ... current_alt=-1.30/-0.04/-0.31)에서
+    relativeAltitude()가 반복적으로 음수로 찍히며 FlyToAltitude가 30초 타임아웃 -> 재시도를
+    계속 반복함 — REP 지점의 실제 지면/survivor_tray_rep 높이가 home 기준 0m보다 높아서(또는
+    PX4 land detector가 낮은 고도에서 오탐 발생) 0.8m 목표가 사실상 지면 근처였던 것으로 보임.
+    3.0m로 올려서 여유를 두고, 복구용 climb_altitude_m도 1.5->3.0으로 같이 올림. 원복 시
+    (실제 YOLO+PrecisionLandOnTarget으로) 이 문제는 정밀 하강 로직이 알아서 처리하므로 무관.
+    같이 지운 FlyToLocalPoint(x_m=130,y_m=35)는 REP 실좌표(홈 기준 East 9.1m/North 52.3m,
+    krac24 waypoints.yaml의 rescue_loc)와 전혀 안 맞는 값이라 REP 도착 직후 기체를 엉뚱한
+    지점으로 보내던 버그였음 — AUTO.MISSION이 이미 REP 상공(way3.plan seq5)에 데려다주므로
+    OFFBOARD 진입 후에는 현재 위치를 그대로 hold하면 되고 별도 재배치가 필요 없다.
+    CloseGripper/VerifyBasketPicked는 그대로 둠 — gripper_stub_success는 false 유지,
+    CloseGripper는 실제 Gazebo servo topic(/model/.../servo_5,6)으로 publish하고
+    완료 후 gripperClosed()를 true로 세팅하므로(2026-07-06 검증됨, HANDOFF 문서 참고)
+    이 부분은 YOLO 스텁과 무관하게 이미 정상 동작한다.
   -->
   <BehaviorTree ID="RescueOperation">
     <RetryUntilSuccessful num_attempts="4">
@@ -168,20 +194,16 @@
           <IsFlightMode mode="OFFBOARD"/>
           <CommandVTOLTransition target_state="MC" timeout_sec="20.0"/>
           <IsVTOLStateMC/>
-          <FlyToLocalPoint x_m="130.0" y_m="35.0" z_m="10.0" xy_tolerance_m="0.5" z_tolerance_m="1.0" max_xy_speed_mps="2.0" max_z_speed_mps="0.8" timeout_sec="80.0"/>
           <WaitForHoverStable altitude_tolerance_m="40.0" max_vertical_speed_mps="0.8" max_horizontal_speed_mps="2.0" stable_duration_sec="0.5" timeout_sec="12.0"/>
           <SetMissionPhase phase="8"/>
           <DeactivateYOLO/>
-          <WaitForPrecisionTarget max_age_sec="4.0" timeout_sec="45.0"/>
-          <EnablePrecisionLander enable="true"/>
-          <PrecisionLandOnTarget target_altitude_m="0.8" timeout_sec="90.0" target_fresh_max_age_sec="10.0"/>
+          <FlyToAltitude target_altitude_m="3.0" tolerance_m="0.3" max_climb_rate_mps="0.5" hold_latlon="true" timeout_sec="30.0"/>
+          <Delay delay_msec="5000"><AlwaysSuccess/></Delay>
           <CloseGripper left_topic="/model/standard_vtol_0/servo_5" right_topic="/model/standard_vtol_0/servo_6" left_position="0.5" right_position="0.5" timeout_sec="5.0"/>
           <VerifyBasketPicked method="gripper_feedback_or_visual_invariant" lift_test_height_m="0.5" timeout_sec="10.0"/>
-          <EnablePrecisionLander enable="false"/>
         </Sequence>
         <Sequence name="RecoverRescueThenRetry">
-          <EnablePrecisionLander enable="false"/>
-          <RecoverVisionLanding policy="hover_climb_reacquire" climb_altitude_m="1.5" timeout_sec="20.0"/>
+          <RecoverVisionLanding policy="hover_climb_reacquire" climb_altitude_m="3.0" timeout_sec="20.0"/>
           <FailAfterRecovery/>
         </Sequence>
       </Fallback>
@@ -276,7 +298,11 @@
     <WaitForWaypointReached seq="7" timeout_sec="600.0"/>
   </BehaviorTree>
 
-  <!-- krac24 PHASE_VERTIPORT_DESCENT 이식: precision_lander로 버티포트 정밀 착륙 -->
+  <!-- krac24 PHASE_VERTIPORT_DESCENT 이식: precision_lander로 버티포트 정밀 착륙.
+       2026-07-07 YOLO 미구현 임시 스텁: RescueOperation과 동일한 이유로
+       WaitForPrecisionTarget/EnablePrecisionLander/PrecisionLandOnTarget을
+       FlyToAltitude로 대체. 실제 YOLO가 붙으면 원래 3줄(target_altitude_m="0.25" 기준)로
+       되돌릴 것. -->
   <BehaviorTree ID="FinalLanding">
     <RetryUntilSuccessful num_attempts="2">
       <Fallback name="FinalLandingWithLocalRecovery">
@@ -290,17 +316,13 @@
           <WaitForHoverStable altitude_tolerance_m="40.0" max_vertical_speed_mps="0.8" max_horizontal_speed_mps="2.0" stable_duration_sec="0.5" timeout_sec="12.0"/>
           <SetMissionPhase phase="10"/>
           <DeactivateYOLO/>
-          <WaitForPrecisionTarget max_age_sec="4.0" timeout_sec="45.0"/>
-          <EnablePrecisionLander enable="true"/>
-          <PrecisionLandOnTarget target_altitude_m="0.25" timeout_sec="150.0" target_fresh_max_age_sec="10.0"/>
-          <EnablePrecisionLander enable="false"/>
+          <FlyToAltitude target_altitude_m="0.5" tolerance_m="0.3" max_climb_rate_mps="0.5" hold_latlon="true" timeout_sec="30.0"/>
           <SetFlightMode mode="AUTO.LAND" timeout_sec="5.0"/>
           <DetectLanding max_relative_altitude_m="0.3" max_vertical_speed_mps="0.2" timeout_sec="45.0"/>
           <VerifyLandingComplete require_disarmed="true" timeout_sec="20.0"/>
           <SetMissionPhase phase="11"/>
         </Sequence>
         <Sequence name="RecoverFinalLandingThenRetry">
-          <EnablePrecisionLander enable="false"/>
           <RecoverFinalLanding policy="hover_reacquire_else_autoland" climb_altitude_m="1.0" timeout_sec="20.0"/>
           <FailAfterRecovery/>
         </Sequence>

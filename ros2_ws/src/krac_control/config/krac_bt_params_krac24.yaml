@@ -1,0 +1,38 @@
+krac_bt_runner:
+  ros__parameters:
+    bt_xml_path: ""
+    tick_rate_hz: 10.0
+    max_ticks: 0
+    print_bt_transitions: false
+
+    mavros_ns: "/mavros"
+    mission_dir: ""
+
+    # SITL/staged integration defaults. Turn these off only after wiring real devices.
+    sim_bypass: true
+    mission_upload_stub_success: false
+    gripper_stub_success: false
+
+    # Replace these with your mission coordinates before full route tests.
+    rep_point: [0.0, 0.0, 10.0]
+    home_point: [0.0, 0.0, 10.0]
+
+    align_p_gain: 0.005
+    max_align_speed: 0.5
+    descend_speed: 0.25
+
+    # krac_bt_params.yaml의 krac24.plan(원본, 14개 항목, seq 0~13) 버전.
+    # 값은 way3.plan용으로 추측한 게 아니라 krac24 자체 vtol_fsm.cpp
+    # (RescueMissionNode)의 rescue_wp_seq/resume_wp_seq/landing_wp_seq
+    # 파라미터 기본값(6/7/13)을 그대로 가져온 것.
+    #   seq0 TAKEOFF, seq1~4 WP(patrol 왕복 첫 구간), seq5 DO(좌표없음),
+    #   seq6 REP, seq7 WP(재상승 복귀 지점), seq8 DO(좌표없음),
+    #   seq9~11 WP(복귀 patrol), seq12 DO(좌표없음), seq13 버티포트(마지막 항목).
+    # 주의: 이 값들은 실제로는 읽히지 않고 krac_mission_bt_krac24.xml에
+    # 리터럴로 박혀 있음 — krac24.plan을 바꾸면 그 XML의 seq도 같이 갱신할 것.
+    rescue_wp_seq: 6
+    resume_wp_seq: 7
+    # drop_wp_seq: krac24.plan에도 드롭존 웨이포인트가 없어 현재 미사용.
+    drop_wp_seq: 999
+    landing_wp_seq: 13
+    safe_ascend_alt: 30.0
