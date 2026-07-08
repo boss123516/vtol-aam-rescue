@@ -1,0 +1,476 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  krac24(cjfgus814123/krac24) 통합: 단일 AUTO.MISSION 플랜 + WaypointReached 트리거 기반 설계.
+  krac_mission_bt_robust.xml(way3.plan 9항목 DIRECT 버전)의 krac24.plan 버전.
+
+  이 파일은 way3.plan 대신 krac24 레포의 krac24.plan을 미션으로 올린다.
+  원본 14개 항목(seq 0~13)에 VTOL_LAND safety-net(seq 14)을 붙였다.
+  seq 값은 MAVROS wp_seq 기준이며 QGC 화면 번호
+  (doJumpId)보다 1 작다.
+    seq0  TAKEOFF (MAV_CMD_NAV_VTOL_TAKEOFF, alt 30)
+    seq1~4  WP (alt 30, patrol 왕복 중 첫 구간)
+    seq5  DO 커맨드(command=3000, 좌표 없음)
+    seq6  REP(구조 지점, alt 10)  <- QGC #7
+    seq7  WP(alt 30, 기존 재상승 복귀 지점; pick 완료 후에는 다시 사용하지 않음)
+    seq8  DO 커맨드(command=3000, 좌표 없음)
+    seq9~11  WP(alt 30, 복귀 patrol)
+    seq11  QGC #12: 여기 도달 후 BT가 QGC #7(seq6)로 mission current를 되돌림
+    seq12  DO 커맨드(command=3000, 좌표 없음)
+    seq13  버티포트(alt 10, 최종 착륙 지점)  <- landing_wp_seq (마지막 항목)
+    seq14  MAV_CMD_NAV_VTOL_LAND safety-net (BT 미개입 시 대비, 실측 검증 후 추가됨)
+  주의: 이 seq 값들은 아래 노드에 리터럴로 박혀 있음 (WaitForWaypointReached/
+  AlignHeadingToWaypoint/SetMissionCurrentWaypoint) — krac_bt_params_krac24.yaml의
+  rescue_wp_seq/resume_wp_seq/landing_wp_seq는 이 노드들에서 실제로 읽히지
+  않으므로, krac24.plan을 바꿀 때는 반드시 이 XML의 seq도 같이 갱신할 것.
+
+  2026-07-07 단순화: 이전 버전은 각 단계를 별도 <BehaviorTree>+<SubTree>로 쪼개
+  놓아서 Groot2/커스텀 뷰어에서 "SubTree 호출 노드"와 "그 안의 실제 루트 노드"가
+  같은 이름으로 겹쳐 보이는 등 노드 수가 실제 로직보다 훨씬 많아 보였다. 실제
+  SITL에서 end-to-end 성공 검증된 로직/파라미터/seq는 전혀 안 건드리고, 한 번만
+  쓰이는 SubTree 10개를 전부 이 자리에 인라인하고, 자식이 하나뿐이라 아무 역할도
+  안 하던 Sequence 래퍼(TakeoffPhase, CruiseToRescue 바깥쪽)도 제거했다. 실행되는
+  트리는 이제 SubTree 경계 없이 딱 실제로 도는 노드만 보인다.
+-->
+<root BTCPP_format="4" main_tree_to_execute="KRAC_Mission_BT">
+
+  <BehaviorTree ID="KRAC_Mission_BT">
+    <ReactiveFallback name="RootReactiveFallback">
+
+      <!-- 비상 감지: 매 틱 최우선으로 검사, 감지되면 즉시 이쪽으로 분기 -->
+      <Sequence name="EmergencyBranch">
+        <IsEmergencyDetected sources="px4_failsafe,mavros_loss,gps_loss,battery_critical,manual_abort,geofence"/>
+        <EmergencyRecovery policy="hold_if_possible_else_px4_failsafe"/>
+      </Sequence>
+
+      <ReactiveSequence name="SafetyGuardedMission">
+        <Sequence name="SafetyGuard">
+          <IsMAVROSConnected max_state_age_sec="5.0"/>
+          <IsBatterySafe sim_bypass="true" min_voltage="0.0" min_percentage="0.0"/>
+        </Sequence>
+
+        <Sequence name="MissionSequence">
+
+          <Fallback name="MissionUploadOrSkipIfAlreadyRunning">
+            <IsVehicleArmed/>
+            <Sequence name="UploadAndStartMission">
+              <ClearMissionPlan optional="true"/>
+              <RetryUntilSuccessful num_attempts="2">
+                <Sequence name="LoadFullMission">
+                  <UploadMissionPlan plan_path="krac24.plan" mission_name="full_route" expected_end="LANDING"/>
+                  <IsMissionUploaded mission_name="full_route" expected_end="LANDING"/>
+                </Sequence>
+              </RetryUntilSuccessful>
+              <RetryUntilSuccessful num_attempts="3">
+                <Sequence name="StartMission">
+                  <SetFlightMode mode="AUTO.MISSION" timeout_sec="5.0"/>
+                  <IsFlightMode mode="AUTO.MISSION"/>
+                </Sequence>
+              </RetryUntilSuccessful>
+            </Sequence>
+          </Fallback>
+
+          <Fallback name="PreflightCheckOrSkipIfAlreadyArmed">
+            <IsVehicleArmed/>
+            <Sequence name="ArmAndVerifyVTOL">
+              <SetMissionPhase phase="0"/>
+              <RetryUntilSuccessful num_attempts="3">
+                <Sequence name="ArmAndVerify">
+                  <ArmVehicle arm="true" timeout_sec="5.0"/>
+                  <IsVehicleArmed/>
+                </Sequence>
+              </RetryUntilSuccessful>
+              <IsVTOLStateMC/>
+            </Sequence>
+          </Fallback>
+
+          <SetMissionPhase phase="1"/>
+
+          <!--
+            ================== RESCUE: QGC #12(seq11) -> QGC #7(seq6) ==================
+            목표 흐름:
+              1) 순항 미션으로 QGC #12(seq11)에 먼저 도착한다.
+              2) BT가 여기서 MC 전환을 보장하고 mission current를 QGC #7(seq6)로 되돌린다.
+              3) QGC #7에 "재도착"한 새 WaypointReached 이벤트를 기다린다.
+                 match="after_start"를 쓰는 이유는 seq11까지 이미 갔으면 max_reached>=6이
+                 항상 참이라 일반 at_or_after 대기가 즉시 성공하기 때문이다.
+              4) QGC #7에서 AUTO.MISSION을 OFFBOARD로 끊고 YOLO 정밀 착륙을 수행한다.
+              5) 접지 후 반드시 disarm, gripper close+attach, 5초 대기, re-arm, 상승한다.
+              6) pick 완료 후 seq7부터 재개한다. seq7은 QGC #12 위치와 거의 같은 복귀점이라
+                 #7 -> #12 구간을 MC로 이동한 뒤 seq8 DO transition으로 FW 역천이한다.
+          -->
+          <Fallback name="RescueOrSkipIfCompleted">
+            <IsRescueCompleted/>
+            <Sequence name="RescueMission">
+
+              <!-- 1) QGC #12(seq11)에 먼저 도착한 뒤 QGC #7(seq6)로 되돌아간다. -->
+              <WaitForWaypointReached seq="11" timeout_sec="600.0"/>
+              <CommandVTOLTransition target_state="MC" timeout_sec="20.0"/>
+              <IsVTOLStateMC/>
+              <SetMissionCurrentWaypoint seq="6" timeout_sec="5.0"/>
+              <WaitForWaypointReached seq="6" match="after_start" timeout_sec="600.0"/>
+              <!-- 2) QGC #7 도착 직후 미션 current를 다시 #7에 고정해 seq7 자동 진행을 끊는다. -->
+              <SetMissionCurrentWaypoint seq="6" timeout_sec="5.0"/>
+
+              <!-- 3) 착륙 + pick (지상 작업). 실패 시 local recovery 후 재시도 -->
+              <RetryUntilSuccessful num_attempts="4">
+                <Fallback name="LandAndPickWithLocalRecovery">
+                  <Sequence name="LandAndPickAttempt">
+                    <SetMissionPhase phase="7"/>
+                    <!-- AUTO.MISSION -> OFFBOARD 로 개입 (미션 시퀀싱 정지). MC는 위에서 이미 보장한다. -->
+                    <StartOffboardSetpointStream mode="hold_current_pose" rate_hz="20"/>
+                    <IsOffboardSetpointStreamAlive min_rate_hz="10" stable_duration_sec="1.0"/>
+                    <SetFlightMode mode="OFFBOARD" timeout_sec="5.0"/>
+                    <IsFlightMode mode="OFFBOARD"/>
+                    <IsVTOLStateMC/>
+                    <WaitForHoverStable altitude_tolerance_m="40.0" max_vertical_speed_mps="0.8" max_horizontal_speed_mps="2.0" stable_duration_sec="0.5" timeout_sec="12.0"/>
+                    <!-- YOLO 정밀 착륙: 타겟 위로 정렬하며 0.3m까지 하강 -->
+                    <SetMissionPhase phase="8"/>
+                    <ActivateYOLO target="basket" mode="start_or_set_target"/>
+                    <WaitForPrecisionTarget max_age_sec="2.0" timeout_sec="30.0"/>
+                    <EnablePrecisionLander enable="true"/>
+                    <PrecisionLandOnTarget target_altitude_m="0.3" timeout_sec="60.0" target_fresh_max_age_sec="1.0"/>
+                    <!-- 접지 + 시동정지: AUTO.LAND 로 완전 접지 후, DISARM 을 명시적으로 보장 -->
+                    <SetFlightMode mode="AUTO.LAND" timeout_sec="5.0"/>
+                    <DetectLanding max_relative_altitude_m="0.4" max_vertical_speed_mps="0.3" timeout_sec="45.0"/>
+                    <ArmVehicle arm="false" timeout_sec="5.0"/>
+                    <!-- 시동 끄고 지상 안정화 5초 대기 후 payload pick -->
+                    <Delay delay_msec="5000">
+                      <AlwaysSuccess/>
+                    </Delay>
+                    <!-- 그리퍼로 트레이(목각인형) pick + payload attach -->
+                    <CloseGripper left_topic="/model/standard_vtol_0/servo_5" right_topic="/model/standard_vtol_0/servo_6" attach_topic="/survivor_tray_rep/attach" left_position="0.5" right_position="0.5" timeout_sec="5.0"/>
+                  </Sequence>
+                  <Sequence name="RecoverRescueThenRetry">
+                    <RecoverVisionLanding policy="hover_climb_reacquire" climb_altitude_m="3.0" timeout_sec="20.0"/>
+                    <FailAfterRecovery/>
+                  </Sequence>
+                </Fallback>
+              </RetryUntilSuccessful>
+
+              <!-- 4) 재-ARM 후 이륙(OFFBOARD 상승). 스트림을 먼저 살려 OFFBOARD 진입 -->
+              <SetMissionPhase phase="9"/>
+              <StartOffboardSetpointStream mode="hold_current_pose" rate_hz="20"/>
+              <IsOffboardSetpointStreamAlive min_rate_hz="10" stable_duration_sec="1.0"/>
+              <SetFlightMode mode="OFFBOARD" timeout_sec="5.0"/>
+              <IsFlightMode mode="OFFBOARD"/>
+              <RetryUntilSuccessful num_attempts="3">
+                <Sequence name="RearmAfterPick">
+                  <ArmVehicle arm="true" timeout_sec="5.0"/>
+                  <IsVehicleArmed/>
+                </Sequence>
+              </RetryUntilSuccessful>
+              <FlyToAltitude target_altitude_m="30.0" tolerance_m="1.0" max_climb_rate_mps="1.5" hold_latlon="true" timeout_sec="60.0"/>
+              <IsAltitudeReached target_altitude_m="30.0" tolerance_m="1.5"/>
+              <!-- payload가 실제로 딸려 올라오는지 lift-test 로 검증 → rescue_completed=true -->
+              <VerifyBasketPicked method="gripper_feedback_or_visual_invariant" lift_test_height_m="0.5" timeout_sec="10.0"/>
+            </Sequence>
+          </Fallback>
+
+          <!-- 6) 복귀: seq7부터 미션 재개 → plan이 seq8 FW역천이 → #12 → seq12 MC역천이 →
+               seq13 버티포트 까지 왔던 길 역순으로 비행한다. 트리거를 seq11에 걸어두지
+               않으므로 #12->#7 루프는 발생하지 않는다. -->
+          <Sequence name="ResumeAfterRescue">
+            <AlignHeadingToWaypoint seq="7" tolerance_rad="0.1" timeout_sec="8.0"/>
+            <SetMissionCurrentWaypoint seq="7" timeout_sec="5.0"/>
+            <RetryUntilSuccessful num_attempts="3">
+              <Sequence name="ResumeAutoMission">
+                <SetFlightMode mode="AUTO.MISSION" timeout_sec="5.0"/>
+                <IsFlightMode mode="AUTO.MISSION"/>
+              </Sequence>
+            </RetryUntilSuccessful>
+          </Sequence>
+
+          <!-- CruiseToDrop/DropOperation/ResumeAfterDrop 없음: krac24.plan에 드롭존
+               웨이포인트가 없어서 원래부터 미참조였음 (전에는 안 쓰이는 <BehaviorTree>
+               정의로 파일에 남아있었으나 정리함). 실좌표가 생기면 새로 추가할 것. -->
+
+          <!-- landing_wp_seq = 13 (krac24 vtol_fsm.cpp 기본값 = 버티포트 도착, krac24.plan의
+               마지막 항목). way3.plan과 달리 이 뒤에 별도 VTOL_LAND safety-net 항목이 없다. -->
+          <WaitForWaypointReached seq="13" timeout_sec="600.0"/>
+
+          <!-- krac24 PHASE_VERTIPORT_DESCENT 이식: precision_lander로 버티포트 정밀 착륙.
+               2026-07-07 YOLO 스텁 해제: RescueOperation과 동일하게 원복
+               (target_altitude_m=0.25는 robust.xml 원래 주석 기준값). PrecisionLandOnTarget이
+               0.25m까지 비전 기준으로 정렬/하강한 뒤 AUTO.LAND로 최종 접지/disarm 처리. -->
+          <RetryUntilSuccessful num_attempts="2">
+            <Fallback name="FinalLandingWithLocalRecovery">
+              <Sequence name="FinalLandingAttempt">
+                <StartOffboardSetpointStream mode="hold_current_pose" rate_hz="20"/>
+                <IsOffboardSetpointStreamAlive min_rate_hz="10" stable_duration_sec="1.0"/>
+                <SetFlightMode mode="OFFBOARD" timeout_sec="5.0"/>
+                <IsFlightMode mode="OFFBOARD"/>
+                <CommandVTOLTransition target_state="MC" timeout_sec="20.0"/>
+                <IsVTOLStateMC/>
+                <WaitForHoverStable altitude_tolerance_m="40.0" max_vertical_speed_mps="0.8" max_horizontal_speed_mps="2.0" stable_duration_sec="0.5" timeout_sec="12.0"/>
+                <SetMissionPhase phase="10"/>
+                <ActivateYOLO target="basket" mode="start_or_set_target"/>
+                <WaitForPrecisionTarget max_age_sec="2.0" timeout_sec="30.0"/>
+                <EnablePrecisionLander enable="true"/>
+                <PrecisionLandOnTarget target_altitude_m="0.25" timeout_sec="60.0" target_fresh_max_age_sec="1.0"/>
+                <SetFlightMode mode="AUTO.LAND" timeout_sec="5.0"/>
+                <DetectLanding max_relative_altitude_m="0.3" max_vertical_speed_mps="0.2" timeout_sec="45.0"/>
+                <VerifyLandingComplete require_disarmed="true" timeout_sec="20.0"/>
+                <SetMissionPhase phase="11"/>
+              </Sequence>
+              <Sequence name="RecoverFinalLandingThenRetry">
+                <RecoverFinalLanding policy="hover_reacquire_else_autoland" climb_altitude_m="1.0" timeout_sec="20.0"/>
+                <FailAfterRecovery/>
+              </Sequence>
+            </Fallback>
+          </RetryUntilSuccessful>
+
+        </Sequence>
+      </ReactiveSequence>
+
+      <GlobalMissionRecovery reason="unhandled_mission_or_guard_failure"/>
+    </ReactiveFallback>
+  </BehaviorTree>
+
+  <TreeNodesModel>
+    <Condition ID="IsEmergencyDetected" editable="true">
+      <input_port name="sources" default="px4_failsafe,mavros_loss,gps_loss,battery_critical,manual_abort,geofence">비상으로 간주할 신호 목록</input_port>
+    </Condition>
+    <Action ID="EmergencyRecovery" editable="true">
+      <input_port name="policy" default="hold_if_possible_else_px4_failsafe">비상 상황 처리 정책</input_port>
+    </Action>
+    <Action ID="GlobalMissionRecovery" editable="true">
+      <input_port name="reason" default="unhandled_failure">전역 미션 실패 복구 사유</input_port>
+    </Action>
+
+    <Condition ID="IsMAVROSConnected" editable="true">
+      <input_port name="max_state_age_sec" default="0.5">/mavros/state 최신성 허용 시간</input_port>
+    </Condition>
+    <Condition ID="IsGPSReady" editable="true">
+      <input_port name="min_fix_status" default="0">GPS fix 최소 상태</input_port>
+    </Condition>
+    <Condition ID="IsGlobalPositionFresh" editable="true">
+      <input_port name="max_age_sec" default="0.5">global position 메시지 최신성 허용 시간</input_port>
+    </Condition>
+    <Condition ID="IsBatterySafe" editable="true">
+      <input_port name="sim_bypass" default="true">시뮬레이션에서 배터리 체크 우회 여부</input_port>
+      <input_port name="min_voltage" default="0.0">최소 전압</input_port>
+      <input_port name="min_percentage" default="0.0">최소 잔량 비율</input_port>
+    </Condition>
+
+    <Action ID="StartOffboardSetpointStream" editable="true">
+      <input_port name="mode" default="hold_current_pose">setpoint stream 방식</input_port>
+      <input_port name="rate_hz" default="20">publish rate</input_port>
+    </Action>
+    <Condition ID="IsOffboardSetpointStreamAlive" editable="true">
+      <input_port name="min_rate_hz" default="10">최소 setpoint publish rate</input_port>
+      <input_port name="stable_duration_sec" default="1.0">최소 연속 유지 시간</input_port>
+    </Condition>
+    <Action ID="SetFlightMode" editable="true">
+      <input_port name="mode" default="OFFBOARD">PX4 flight mode</input_port>
+      <input_port name="timeout_sec" default="5.0">모드 요청 timeout</input_port>
+    </Action>
+    <Condition ID="IsFlightMode" editable="true">
+      <input_port name="mode" default="OFFBOARD">확인할 PX4 flight mode</input_port>
+    </Condition>
+    <Action ID="ArmVehicle" editable="true">
+      <input_port name="arm" default="true">arm 또는 disarm 요청</input_port>
+      <input_port name="timeout_sec" default="5.0">arming timeout</input_port>
+    </Action>
+    <Condition ID="IsVehicleArmed" editable="true"/>
+    <Condition ID="IsVTOLStateMC" editable="true"/>
+    <Action ID="EnsureFixedWingCruise" editable="true">
+      <input_port name="transition_source" default="mission_plan_or_command">FW 전환 출처</input_port>
+      <input_port name="timeout_sec" default="45.0">FW 전환 확인 timeout</input_port>
+    </Action>
+    <Action ID="CommandVTOLTransition" editable="true">
+      <input_port name="target_state" default="MC">목표 VTOL 상태</input_port>
+      <input_port name="timeout_sec" default="20.0">전환 명령 timeout</input_port>
+    </Action>
+
+    <Action ID="FlyToAltitude" editable="true">
+      <input_port name="target_altitude_m" default="10.0">목표 상대 고도</input_port>
+      <input_port name="tolerance_m" default="1.0">허용 고도 오차</input_port>
+      <input_port name="max_climb_rate_mps" default="1.0">최대 상승률</input_port>
+      <input_port name="hold_latlon" default="true">현재 lat/lon 유지 여부</input_port>
+      <input_port name="timeout_sec" default="60.0">고도 도달 timeout</input_port>
+    </Action>
+    <Condition ID="IsAltitudeReached" editable="true">
+      <input_port name="target_altitude_m" default="10.0">목표 상대 고도</input_port>
+      <input_port name="tolerance_m" default="0.5">허용 고도 오차</input_port>
+    </Condition>
+    <Action ID="WaitForHoverStable" editable="true">
+      <input_port name="altitude_tolerance_m" default="0.5">허용 고도 오차</input_port>
+      <input_port name="max_vertical_speed_mps" default="0.3">최대 수직 속도</input_port>
+      <input_port name="max_horizontal_speed_mps" default="0.5">최대 수평 속도</input_port>
+      <input_port name="stable_duration_sec" default="2.0">안정 유지 시간</input_port>
+    </Action>
+
+    <Action ID="ClearMissionPlan" editable="true">
+      <input_port name="optional" default="true">실패해도 무시 가능한지 여부</input_port>
+    </Action>
+    <Action ID="UploadMissionPlan" editable="true">
+      <input_port name="plan_path" default="krac24.plan">업로드할 mission plan 경로</input_port>
+      <input_port name="mission_name" default="full_route">mission 이름</input_port>
+      <input_port name="expected_end" default="LANDING">예상 종료 지점</input_port>
+    </Action>
+    <Condition ID="IsMissionUploaded" editable="true">
+      <input_port name="mission_name" default="full_route">확인할 mission 이름</input_port>
+      <input_port name="expected_end" default="LANDING">예상 종료 지점</input_port>
+    </Condition>
+    <Condition ID="IsRescueCompleted" editable="true"/>
+    <Action ID="EnterREPStation" editable="true">
+      <input_port name="approach_radius_m" default="120.0">REP 접근 감지 반경</input_port>
+      <input_port name="station_radius_m" default="30.0">REP 작업 구역 반경</input_port>
+      <input_port name="max_cross_track_m" default="60.0">허용 cross-track 오차</input_port>
+      <input_port name="timeout_sec" default="300.0">REP 접근 timeout</input_port>
+    </Action>
+    <Condition ID="IsAtREPRegion" editable="true">
+      <input_port name="radius_m" default="30.0">REP 작업 구역 반경</input_port>
+      <input_port name="max_altitude_error_m" default="20.0">허용 고도 오차</input_port>
+    </Condition>
+    <Action ID="EnterHomeStation" editable="true">
+      <input_port name="approach_radius_m" default="120.0">Home 접근 감지 반경</input_port>
+      <input_port name="station_radius_m" default="30.0">Home 작업 구역 반경</input_port>
+      <input_port name="max_cross_track_m" default="60.0">허용 cross-track 오차</input_port>
+      <input_port name="timeout_sec" default="300.0">Home 접근 timeout</input_port>
+    </Action>
+    <Condition ID="IsAtHomeRegion" editable="true">
+      <input_port name="radius_m" default="30.0">Home 작업 구역 반경</input_port>
+      <input_port name="max_altitude_error_m" default="20.0">허용 고도 오차</input_port>
+    </Condition>
+
+    <Condition ID="IsWaypointReached" editable="true">
+      <input_port name="seq" default="0">확인할 웨이포인트 시퀀스 번호</input_port>
+    </Condition>
+    <Action ID="WaitForWaypointReached" editable="true">
+      <input_port name="seq" default="0">대기할 웨이포인트 시퀀스 번호</input_port>
+      <input_port name="timeout_sec" default="300.0">최대 대기 시간</input_port>
+      <input_port name="match" default="at_or_after">at_or_after, exact, after_start</input_port>
+    </Action>
+    <Action ID="SetMissionCurrentWaypoint" editable="true">
+      <input_port name="seq" default="0">현재 미션 아이템으로 지정할 시퀀스 번호</input_port>
+      <input_port name="timeout_sec" default="5.0">서비스 timeout</input_port>
+    </Action>
+    <Action ID="AlignHeadingToWaypoint" editable="true">
+      <input_port name="seq" default="0">기수를 정렬할 목표 웨이포인트</input_port>
+      <input_port name="tolerance_rad" default="0.1">허용 헤딩 오차</input_port>
+      <input_port name="timeout_sec" default="8.0">정렬 timeout</input_port>
+    </Action>
+    <Action ID="EnablePrecisionLander" editable="true">
+      <input_port name="enable" default="true">precision_lander 활성/비활성</input_port>
+    </Action>
+    <Condition ID="IsPrecisionTargetDetected" editable="true">
+      <input_port name="max_age_sec" default="0.5">TargetError 최신성 허용 시간</input_port>
+    </Condition>
+    <Action ID="WaitForPrecisionTarget" editable="true">
+      <input_port name="max_age_sec" default="2.0">TargetError 최신성 허용 시간</input_port>
+      <input_port name="timeout_sec" default="30.0">타겟 획득 대기 제한 시간</input_port>
+    </Action>
+    <Action ID="PrecisionLandOnTarget" editable="true">
+      <input_port name="target_altitude_m" default="0.3">정밀착륙 목표 고도</input_port>
+      <input_port name="timeout_sec" default="60.0">착륙 timeout</input_port>
+      <input_port name="target_fresh_max_age_sec" default="1.0">TargetError 최신성 허용 시간</input_port>
+    </Action>
+    <Action ID="SetMissionPhase" editable="true">
+      <input_port name="phase" default="0">krac_interfaces/FlightPhase 값</input_port>
+    </Action>
+    <Action ID="OpenGripper" editable="true">
+      <input_port name="service" default="/gripper/open">legacy service 이름</input_port>
+      <input_port name="left_topic" default="/model/standard_vtol_0/servo_5">왼쪽 gripper joint command 토픽</input_port>
+      <input_port name="right_topic" default="/model/standard_vtol_0/servo_6">오른쪽 gripper joint command 토픽</input_port>
+      <input_port name="detach_topic" default="/survivor_tray_rep/detach">payload detachable joint detach 토픽</input_port>
+      <input_port name="left_position" default="-1.2">왼쪽 open 위치</input_port>
+      <input_port name="right_position" default="-1.2">오른쪽 open 위치</input_port>
+      <input_port name="settle_sec" default="1.0">명령 유지 시간</input_port>
+      <input_port name="publish_rate_hz" default="20.0">명령 발행 주기</input_port>
+      <input_port name="timeout_sec" default="5.0">gripper timeout</input_port>
+    </Action>
+
+    <Action ID="ActivateYOLO" editable="true">
+      <input_port name="target" default="basket">탐지 target</input_port>
+      <input_port name="mode" default="start_or_set_target">YOLO 활성화 방식</input_port>
+    </Action>
+    <Action ID="DeactivateYOLO" editable="true">
+      <input_port name="target" default="basket">비활성화할 target</input_port>
+    </Action>
+    <Condition ID="IsVisionTopicFresh" editable="true">
+      <input_port name="topic" default="/vision/detections">vision 결과 토픽</input_port>
+      <input_port name="max_age_sec" default="0.5">최신성 허용 시간</input_port>
+    </Condition>
+    <Condition ID="IsObjectDetected" editable="true">
+      <input_port name="target" default="basket">탐지할 객체</input_port>
+      <input_port name="min_confidence" default="0.55">최소 confidence</input_port>
+      <input_port name="stable_frames" default="3">연속 탐지 프레임 수</input_port>
+    </Condition>
+    <Action ID="ExecuteSearchPattern" editable="true">
+      <input_port name="target" default="basket">탐색 target</input_port>
+      <input_port name="pattern" default="spiral_or_lawnmower">탐색 패턴</input_port>
+      <input_port name="max_duration_sec" default="45.0">최대 탐색 시간</input_port>
+    </Action>
+    <Action ID="AlignToBasket" editable="true">
+      <input_port name="pixel_tolerance_px" default="25">허용 pixel 오차</input_port>
+      <input_port name="yaw_tolerance_rad" default="0.1">허용 yaw 오차</input_port>
+      <input_port name="stable_duration_sec" default="1.0">정렬 유지 시간</input_port>
+      <input_port name="timeout_sec" default="35.0">정렬 timeout</input_port>
+    </Action>
+    <Action ID="AlignToLandingMarker" editable="true">
+      <input_port name="pixel_tolerance_px" default="25">허용 pixel 오차</input_port>
+      <input_port name="yaw_tolerance_rad" default="0.1">허용 yaw 오차</input_port>
+      <input_port name="stable_duration_sec" default="1.0">정렬 유지 시간</input_port>
+      <input_port name="timeout_sec" default="35.0">정렬 timeout</input_port>
+    </Action>
+    <Action ID="DescendWithAlignment" editable="true">
+      <input_port name="target" default="basket">정렬 유지 target</input_port>
+      <input_port name="descent_step_m" default="0.3">단계 하강량</input_port>
+      <input_port name="min_confidence" default="0.55">최소 confidence</input_port>
+      <input_port name="max_lost_time_sec" default="0.7">탐지 상실 허용 시간</input_port>
+      <input_port name="timeout_sec" default="60.0">하강 timeout</input_port>
+      <input_port name="target_altitude_m" default="0.8">하강 목표 고도</input_port>
+    </Action>
+    <Action ID="LandOnBasketZone" editable="true">
+      <input_port name="target_altitude_m" default="0.35">그리퍼 동작 목표 고도</input_port>
+      <input_port name="max_horizontal_error_m" default="0.20">허용 수평 오차</input_port>
+      <input_port name="timeout_sec" default="30.0">착륙 구역 접근 timeout</input_port>
+    </Action>
+    <Action ID="CloseGripper" editable="true">
+      <input_port name="service" default="/gripper/close">legacy service 이름</input_port>
+      <input_port name="left_topic" default="/model/standard_vtol_0/servo_5">왼쪽 gripper joint command 토픽</input_port>
+      <input_port name="right_topic" default="/model/standard_vtol_0/servo_6">오른쪽 gripper joint command 토픽</input_port>
+      <input_port name="attach_topic" default="/survivor_tray_rep/attach">payload detachable joint attach 토픽</input_port>
+      <input_port name="left_position" default="0.5">왼쪽 close 위치</input_port>
+      <input_port name="right_position" default="0.5">오른쪽 close 위치</input_port>
+      <input_port name="settle_sec" default="1.0">명령 유지 시간</input_port>
+      <input_port name="publish_rate_hz" default="20.0">명령 발행 주기</input_port>
+      <input_port name="timeout_sec" default="5.0">gripper timeout</input_port>
+    </Action>
+    <Action ID="VerifyBasketPicked" editable="true">
+      <input_port name="method" default="gripper_feedback_or_visual_invariant">픽업 검증 방식</input_port>
+      <input_port name="lift_test_height_m" default="0.5">픽업 검증용 미소 상승 고도</input_port>
+      <input_port name="timeout_sec" default="10.0">검증 timeout</input_port>
+    </Action>
+    <Condition ID="VerifyPayloadSecured" editable="true">
+      <input_port name="method" default="gripper_feedback_or_visual_invariant">payload secure 확인 방식</input_port>
+    </Condition>
+    <Action ID="RecoverVisionLanding" editable="true">
+      <input_port name="policy" default="hover_climb_reacquire">비전 착륙 실패 복구 정책</input_port>
+      <input_port name="climb_altitude_m" default="1.5">재탐색 전 상승 고도</input_port>
+      <input_port name="timeout_sec" default="20.0">복구 timeout</input_port>
+    </Action>
+
+    <Action ID="LandOnLandingZone" editable="true">
+      <input_port name="handoff_altitude_m" default="1.0">AUTO.LAND handoff 고도</input_port>
+      <input_port name="max_horizontal_error_m" default="0.25">허용 수평 오차</input_port>
+      <input_port name="timeout_sec" default="30.0">착륙 구역 접근 timeout</input_port>
+    </Action>
+    <Action ID="DetectLanding" editable="true">
+      <input_port name="max_relative_altitude_m" default="0.3">착륙 판정 상대 고도</input_port>
+      <input_port name="max_vertical_speed_mps" default="0.2">착륙 판정 수직 속도</input_port>
+      <input_port name="timeout_sec" default="45.0">착륙 판정 timeout</input_port>
+    </Action>
+    <Action ID="VerifyLandingComplete" editable="true">
+      <input_port name="require_disarmed" default="true">disarm 필요 여부</input_port>
+      <input_port name="timeout_sec" default="20.0">완료 검증 timeout</input_port>
+    </Action>
+    <Action ID="RecoverFinalLanding" editable="true">
+      <input_port name="policy" default="hover_reacquire_else_autoland">최종 착륙 실패 복구 정책</input_port>
+      <input_port name="climb_altitude_m" default="1.0">재탐색 전 상승 고도</input_port>
+      <input_port name="timeout_sec" default="20.0">복구 timeout</input_port>
+    </Action>
+    <Action ID="FailAfterRecovery" editable="true"/>
+  </TreeNodesModel>
+</root>

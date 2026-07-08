@@ -1,0 +1,10 @@
+<root main_tree_to_execute="Main">
+  <BehaviorTree ID="Main">
+    <OpenGripper left_topic="/model/standard_vtol_0/servo_5"
+                 right_topic="/model/standard_vtol_0/servo_6"
+                 left_position="-1.2"
+                 right_position="-1.2"
+                 settle_sec="1.0"
+                 timeout_sec="3.0"/>
+  </BehaviorTree>
+</root>
