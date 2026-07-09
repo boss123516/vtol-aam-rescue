@@ -62,7 +62,15 @@ sleep 1
 
 sleep 1
 
-spawn_model "rescue_box at REP" "$MODEL_ROOT/box/model.sdf" "rescue_box" "$REP_X" "$REP_Y" "0.5"
+# box.dae's origin is bottom-center (verified: mesh z range 0-174mm), same
+# convention as survivor_tray. It's meant to sit inside the tray, resting on
+# the tray floor's top surface (tray_floor_collision pose z=0.0415 + half its
+# 0.003m thickness = 0.043m), not floating at a fixed z=0.5 in open air. The
+# previous z=0.5 (combined with the model's own 3x-oversized scale, fixed
+# separately in box/model.sdf) had the box hovering well above the tray with
+# no ground contact - visually "floating", and a real physical obstruction
+# the vehicle got snagged on during precision descent/gripper ops.
+spawn_model "rescue_box at REP" "$MODEL_ROOT/box/model.sdf" "rescue_box" "$REP_X" "$REP_Y" "0.043"
 
 sleep 1
 
@@ -72,7 +80,13 @@ sleep 1
 
 sleep 1
 
-spawn_model "survivor_tray at REP" "$MODEL_ROOT/survivor_tray/model.sdf" "survivor_tray_rep" "$REP_X" "$REP_Y" "0.08"
+# survivor_tray/model.sdf's own origin is the tray's bottom-center (see its
+# header comment), so z=0.0 sits it flush on the ground. The previous z=0.08
+# floated the whole tray (legs included) 8cm above the true ground plane -
+# visually confirmed floating, and a likely cause of the vehicle appearing to
+# get physically hung up around alt~0.6m during precision descent (colliding
+# with the elevated tray instead of reaching true ground level).
+spawn_model "survivor_tray at REP" "$MODEL_ROOT/survivor_tray/model.sdf" "survivor_tray_rep" "$REP_X" "$REP_Y" "0.0"
 
 sleep 1
 

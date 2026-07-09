@@ -152,21 +152,57 @@ DetectLanding::DetectLanding(const std::string& name, const BT::NodeConfiguratio
 : BT::StatefulActionNode(name, config), ctx_(globalContext()) {}
 BT::PortsList DetectLanding::providedPorts()
 {
-  return {BT::InputPort<double>("max_relative_altitude_m", 0.3, ""), BT::InputPort<double>("max_vertical_speed_mps", 0.2, ""), BT::InputPort<double>("timeout_sec", 45.0, "")};
+  return {
+    BT::InputPort<double>("max_relative_altitude_m", 0.3, ""),
+    BT::InputPort<double>("max_vertical_speed_mps", 0.2, ""),
+    BT::InputPort<double>("timeout_sec", 45.0, ""),
+    BT::InputPort<bool>("require_px4_landed_state", false,
+      "Require MAVROS/PX4 landed_state=ON_GROUND"),
+    BT::InputPort<double>("stable_duration_sec", 0.0,
+      "How long the landing condition must remain true")
+  };
 }
 BT::NodeStatus DetectLanding::onStart()
 {
   getInput("max_relative_altitude_m", max_relative_altitude_m_);
   getInput("max_vertical_speed_mps", max_vertical_speed_mps_);
   getInput("timeout_sec", timeout_sec_);
+  getInput("require_px4_landed_state", require_px4_landed_state_);
+  getInput("stable_duration_sec", stable_duration_sec_);
   start_time_ = ctx_->node()->now();
+  stable_start_ = rclcpp::Time(0, 0, ctx_->node()->get_clock()->get_clock_type());
   return BT::NodeStatus::RUNNING;
 }
 BT::NodeStatus DetectLanding::onRunning()
 {
-  if (ctx_->landedState() == MAV_LANDED_STATE_ON_GROUND) return BT::NodeStatus::SUCCESS;
-  if (ctx_->relativeAltitude() <= max_relative_altitude_m_ && std::abs(ctx_->verticalSpeed()) <= max_vertical_speed_mps_) return BT::NodeStatus::SUCCESS;
-  if ((ctx_->node()->now() - start_time_).seconds() > timeout_sec_) return BT::NodeStatus::FAILURE;
+  const bool px4_grounded =
+    ctx_->landedState() == MAV_LANDED_STATE_ON_GROUND;
+  const bool kinematic_landing =
+    ctx_->relativeAltitude() <= max_relative_altitude_m_ &&
+    std::abs(ctx_->verticalSpeed()) <= max_vertical_speed_mps_;
+  const bool landed_ok =
+    require_px4_landed_state_ ? px4_grounded : (px4_grounded || kinematic_landing);
+
+  if (landed_ok) {
+    if (stable_start_.nanoseconds() == 0) stable_start_ = ctx_->node()->now();
+    if ((ctx_->node()->now() - stable_start_).seconds() >= stable_duration_sec_) {
+      RCLCPP_INFO(ctx_->node()->get_logger(),
+        "DetectLanding confirmed: px4_grounded=%s alt=%.2f vz=%.2f stable=%.2fs",
+        px4_grounded ? "true" : "false",
+        ctx_->relativeAltitude(), ctx_->verticalSpeed(), stable_duration_sec_);
+      return BT::NodeStatus::SUCCESS;
+    }
+  } else {
+    stable_start_ = rclcpp::Time(0, 0, ctx_->node()->get_clock()->get_clock_type());
+  }
+
+  if ((ctx_->node()->now() - start_time_).seconds() > timeout_sec_) {
+    RCLCPP_WARN(ctx_->node()->get_logger(),
+      "DetectLanding timeout: px4_landed_state=%d alt=%.2f vz=%.2f require_px4=%s",
+      ctx_->landedState(), ctx_->relativeAltitude(), ctx_->verticalSpeed(),
+      require_px4_landed_state_ ? "true" : "false");
+    return BT::NodeStatus::FAILURE;
+  }
   return BT::NodeStatus::RUNNING;
 }
 void DetectLanding::onHalted() {}

@@ -99,7 +99,10 @@ private:
   double max_relative_altitude_m_{0.3};
   double max_vertical_speed_mps_{0.2};
   double timeout_sec_{45.0};
+  bool require_px4_landed_state_{false};
+  double stable_duration_sec_{0.0};
   rclcpp::Time start_time_;
+  rclcpp::Time stable_start_;
 };
 
 class VerifyLandingComplete : public BT::StatefulActionNode

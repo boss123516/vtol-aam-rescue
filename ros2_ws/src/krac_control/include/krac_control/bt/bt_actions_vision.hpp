@@ -111,7 +111,16 @@ private:
   double start_altitude_m_{0.0};
   double target_altitude_m_{0.0};
   double timeout_sec_{10.0};
+  double stable_duration_sec_{1.5};
+  double max_center_drift_px_{60.0};
+  double max_area_change_ratio_{0.35};
+  bool require_contact_{false};
+  bool require_visual_{true};
+  double start_center_x_{0.0};
+  double start_center_y_{0.0};
+  double start_bbox_area_{0.0};
   rclcpp::Time start_time_;
+  rclcpp::Time evidence_stable_start_;
 };
 
 }  // namespace krac_control::bt

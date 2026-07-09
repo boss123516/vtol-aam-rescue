@@ -1,21 +1,33 @@
 <?xml version="1.0" ?>
 <sdf version="1.6">
+  <!--
+    box.dae raw mesh bounding box is 230x170x174mm (origin at bottom-center,
+    z starts at 0). scale must be 0.001 (mm->m, same convention as
+    survivor_tray) to come out to 0.23 x 0.17 x 0.174m - matching the tray's
+    own 0.237x0.137m footprint. The previous 0.003 scale made it 0.69 x 0.51 x
+    0.522m (3x too big in every dimension), which combined with auto_spawn.sh
+    floating it at z=0.5 caused the vehicle to physically collide with/get
+    snagged on this oversized static box during precision descent/gripper ops.
+  -->
   <model name="box_dae">
     <static>true</static>
     <link name="link">
-      <collision name="collision">
-        <geometry>
-          <mesh>
-            <uri>model://box/meshes/box.dae</uri>
-            <scale>0.003 0.003 0.003</scale>
-          </mesh>
-        </geometry>
-      </collision>
+      <!--
+        No collision on purpose: the real pickup mechanic is
+        gz-sim-detachable-joint-system jointing gripper_body to
+        survivor_tray_rep's tray_link (see standard_vtol/model.sdf), not a
+        physical grab of this box. With the box's scale/position corrected
+        above (previously 3x oversized and floating), its collision mesh now
+        sits exactly in the vehicle's AUTO.LAND touchdown path and caused a
+        violent physics response (vehicle flung ~21m sideways) when the
+        landing gear intersected this static full-mesh collider. Purely
+        visual is sufficient and matches how the box is actually acquired.
+      -->
       <visual name="visual">
         <geometry>
           <mesh>
             <uri>model://box/meshes/box.dae</uri>
-            <scale>0.003 0.003 0.003</scale>
+            <scale>0.001 0.001 0.001</scale>
           </mesh>
         </geometry>
       </visual>

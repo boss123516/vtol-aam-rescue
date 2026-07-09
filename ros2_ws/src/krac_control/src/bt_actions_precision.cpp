@@ -187,7 +187,10 @@ BT::PortsList PrecisionLandOnTarget::providedPorts()
   return {
     BT::InputPort<double>("target_altitude_m", 0.3, ""),
     BT::InputPort<double>("timeout_sec", 60.0, ""),
-    BT::InputPort<double>("target_fresh_max_age_sec", 3.0, "")
+    BT::InputPort<double>("target_fresh_max_age_sec", 3.0, ""),
+    BT::InputPort<double>("close_range_lock_alt_m", 2.0, ""),
+    BT::InputPort<bool>("require_landed_state", false,
+      "When true, keep the lander active until PX4 reports ON_GROUND")
   };
 }
 BT::NodeStatus PrecisionLandOnTarget::onStart()
@@ -195,17 +198,48 @@ BT::NodeStatus PrecisionLandOnTarget::onStart()
   getInput("target_altitude_m", target_altitude_m_);
   getInput("timeout_sec", timeout_sec_);
   getInput("target_fresh_max_age_sec", target_fresh_max_age_sec_);
+  getInput("close_range_lock_alt_m", close_range_lock_alt_m_);
+  getInput("require_landed_state", require_landed_state_);
   start_time_ = ctx_->node()->now();
   ctx_->setPrecisionLanderEnabled(true);
   return BT::NodeStatus::RUNNING;
 }
 BT::NodeStatus PrecisionLandOnTarget::onRunning()
 {
-  if (ctx_->relativeAltitude() <= target_altitude_m_ || ctx_->landedState() == MAV_LANDED_STATE_ON_GROUND) {
+  if (ctx_->landedState() == MAV_LANDED_STATE_ON_GROUND) {
+    ctx_->setPrecisionLanderEnabled(false);
+    RCLCPP_INFO(ctx_->node()->get_logger(),
+      "PrecisionLandOnTarget: PX4 reports ON_GROUND; landing committed.");
+    return BT::NodeStatus::SUCCESS;
+  }
+
+  if (!require_landed_state_ && ctx_->relativeAltitude() <= target_altitude_m_) {
     ctx_->setPrecisionLanderEnabled(false);
     return BT::NodeStatus::SUCCESS;
   }
+
+  if (require_landed_state_ && ctx_->relativeAltitude() <= target_altitude_m_) {
+    RCLCPP_INFO_THROTTLE(
+      ctx_->node()->get_logger(), *ctx_->node()->get_clock(), 1000,
+      "PrecisionLandOnTarget: low altitude %.2fm; waiting for PX4 ON_GROUND.",
+      ctx_->relativeAltitude());
+  }
   if (!ctx_->targetErrorFresh(target_fresh_max_age_sec_)) {
+    // 실측 확인: 구조 박스에 근접(대략 2m 이하)하면 정렬이 거의 완벽해도
+    // YOLO/ArUco가 예외 없이 타겟을 놓친다 (근접 시야각/스케일 한계로 추정).
+    // 이미 그 근접 구간까지 들어온 상태라면 즉시 실패시키지 않고 계속
+    // RUNNING을 유지한다 - precision_lander 노드가 마지막 정렬을 신뢰하고
+    // 눈 감고 하강을 이어가서(blind descent), 위의 고도 기준 SUCCESS
+    // 조건(비전과 무관)에 도달하게 한다. 아직 근접 구간 밖에서 놓쳤다면
+    // (정렬 자체가 안 됐거나 실제 이탈) 기존처럼 즉시 실패 -> BT가 REP로
+    // 복귀시켜 재시도하게 둔다.
+    if (ctx_->relativeAltitude() <= close_range_lock_alt_m_) {
+      RCLCPP_WARN_THROTTLE(
+        ctx_->node()->get_logger(), *ctx_->node()->get_clock(), 1000,
+        "Precision landing target stale near ground (alt<=%.1fm); trusting last alignment, continuing.",
+        close_range_lock_alt_m_);
+      return BT::NodeStatus::RUNNING;
+    }
     ctx_->setPrecisionLanderEnabled(false);
     RCLCPP_WARN_THROTTLE(
       ctx_->node()->get_logger(), *ctx_->node()->get_clock(), 1000,
@@ -367,8 +401,9 @@ BT::NodeStatus AlignHeadingToWaypoint::onRunning()
   ctx_->publishVelocity(cmd);
   if ((ctx_->node()->now() - start_time_).seconds() > timeout_sec_) {
     ctx_->publishZeroVelocity();
-    RCLCPP_WARN(ctx_->node()->get_logger(), "AlignHeadingToWaypoint timed out; continuing mission resume.");
-    return BT::NodeStatus::SUCCESS;
+    RCLCPP_WARN(ctx_->node()->get_logger(),
+      "AlignHeadingToWaypoint timed out; refusing FW transition.");
+    return BT::NodeStatus::FAILURE;
   }
   return BT::NodeStatus::RUNNING;
 }

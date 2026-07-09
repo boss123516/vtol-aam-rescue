@@ -19,6 +19,7 @@
 #include <geometry_msgs/msg/twist.hpp>
 #include <geometry_msgs/msg/point.hpp>
 #include <std_msgs/msg/float64.hpp>
+#include <std_msgs/msg/bool.hpp>
 #include <std_msgs/msg/string.hpp>
 #include <std_srvs/srv/trigger.hpp>
 #include <std_srvs/srv/set_bool.hpp>
@@ -122,6 +123,8 @@ public:
 
   void setGripperClosed(bool closed) { gripper_closed_ = closed; }
   bool gripperClosed() const { return gripper_closed_; }
+  bool gripperContact() const { std::lock_guard<std::mutex> lock(mutex_); return has_gripper_contact_ && gripper_contact_; }
+  bool hasGripperContactFeedback() const { std::lock_guard<std::mutex> lock(mutex_); return has_gripper_contact_; }
   void markRescueCompleted();
   bool rescueCompleted() const;
 
@@ -213,6 +216,8 @@ private:
   std::string last_uploaded_mission_name_;
   bool last_mission_upload_ok_{false};
   bool gripper_closed_{false};
+  bool gripper_contact_{false};
+  bool has_gripper_contact_{false};
   bool rescue_completed_{false};
 
   rclcpp::Subscription<mavros_msgs::msg::State>::SharedPtr state_sub_;
@@ -227,6 +232,7 @@ private:
   rclcpp::Subscription<mavros_msgs::msg::WaypointList>::SharedPtr wp_list_sub_;
   rclcpp::Subscription<krac_interfaces::msg::TargetError>::SharedPtr target_error_sub_;
   rclcpp::Subscription<geometry_msgs::msg::Twist>::SharedPtr precision_lander_vel_sub_;
+  rclcpp::Subscription<std_msgs::msg::Bool>::SharedPtr gripper_contact_sub_;
 
   rclcpp::Publisher<mavros_msgs::msg::GlobalPositionTarget>::SharedPtr global_setpoint_pub_;
   rclcpp::Publisher<geometry_msgs::msg::Twist>::SharedPtr velocity_pub_;

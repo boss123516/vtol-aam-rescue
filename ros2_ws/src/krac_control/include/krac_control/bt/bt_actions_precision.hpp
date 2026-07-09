@@ -105,6 +105,8 @@ private:
   double target_altitude_m_{0.3};
   double timeout_sec_{60.0};
   double target_fresh_max_age_sec_{3.0};
+  double close_range_lock_alt_m_{2.0};
+  bool require_landed_state_{false};
   rclcpp::Time start_time_;
 };
 

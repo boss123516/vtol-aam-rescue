@@ -56,28 +56,83 @@ BT::NodeStatus AlignToTarget::onStart()
 }
 BT::NodeStatus AlignToTarget::onRunning()
 {
-  if (!ctx_->objectDetected(0.5)) {
+  const auto now = ctx_->node()->now();
+  const double elapsed = (now - start_time_).seconds();
+
+  // IMPORTANT: use the same TargetError stream as WaitForPrecisionTarget and
+  // precision_lander. The old implementation read legacy camera/target_error
+  // (geometry_msgs/Point), while vision_tracker publishes /vision/target_error.
+  // That mismatch made WaitForPrecisionTarget succeed and AlignToBasket wait
+  // forever with "no sufficiently fresh target".
+  constexpr double kFreshAgeSec = 3.0;
+  if (!ctx_->targetErrorFresh(kFreshAgeSec)) {
     ctx_->publishZeroVelocity();
-    if ((ctx_->node()->now() - start_time_).seconds() > timeout_sec_) return BT::NodeStatus::FAILURE;
+    stable_start_ = rclcpp::Time(0, 0, ctx_->node()->get_clock()->get_clock_type());
+    if (elapsed > timeout_sec_) {
+      RCLCPP_WARN(ctx_->node()->get_logger(),
+        "%s timed out: /vision/target_error not fresh for %.1f s",
+        name().c_str(), timeout_sec_);
+      return BT::NodeStatus::FAILURE;
+    }
     return BT::NodeStatus::RUNNING;
   }
-  auto err = ctx_->visionError();
-  const double pixel_error = std::sqrt(err.x * err.x + err.y * err.y);
-  geometry_msgs::msg::Twist cmd;
-  cmd.linear.x = clamp(-err.y * ctx_->alignPGain(), -ctx_->maxAlignSpeed(), ctx_->maxAlignSpeed());
-  cmd.linear.y = clamp(-err.x * ctx_->alignPGain(), -ctx_->maxAlignSpeed(), ctx_->maxAlignSpeed());
-  ctx_->publishVelocity(cmd);
+
+  const auto target = ctx_->targetError();
+  if (!target.is_detected || target.confidence < 0.20) {
+    ctx_->publishZeroVelocity();
+    stable_start_ = rclcpp::Time(0, 0, ctx_->node()->get_clock()->get_clock_type());
+    return BT::NodeStatus::RUNNING;
+  }
+
+  const double err_x = static_cast<double>(target.pixel_err_x);
+  const double err_y = static_cast<double>(target.pixel_err_y);
+  const double pixel_error = std::hypot(err_x, err_y);
 
   if (pixel_error <= pixel_tolerance_px_) {
-    if (stable_start_.nanoseconds() == 0) stable_start_ = ctx_->node()->now();
-    if ((ctx_->node()->now() - stable_start_).seconds() >= stable_duration_sec_) {
-      ctx_->publishZeroVelocity();
+    ctx_->publishZeroVelocity();
+    if (stable_start_.nanoseconds() == 0) {
+      stable_start_ = now;
+      RCLCPP_INFO(ctx_->node()->get_logger(),
+        "%s entered deadband: err=(%.1f, %.1f), norm=%.1f px, source=%s, conf=%.2f",
+        name().c_str(), err_x, err_y, pixel_error,
+        target.source.c_str(), static_cast<double>(target.confidence));
+    }
+    if ((now - stable_start_).seconds() >= stable_duration_sec_) {
+      RCLCPP_INFO(ctx_->node()->get_logger(),
+        "%s aligned: norm=%.1f px stable=%.2f s",
+        name().c_str(), pixel_error, (now - stable_start_).seconds());
       return BT::NodeStatus::SUCCESS;
     }
   } else {
     stable_start_ = rclcpp::Time(0, 0, ctx_->node()->get_clock()->get_clock_type());
+
+    const double gain_scale = (pixel_error < 140.0) ? 0.40 : 0.75;
+    const double max_speed = (pixel_error < 140.0)
+      ? std::min(0.18, ctx_->maxAlignSpeed())
+      : std::min(0.35, ctx_->maxAlignSpeed());
+
+    geometry_msgs::msg::Twist cmd;
+    // Preserve the project's established image-to-body mapping, but use the
+    // live TargetError stream. Near the center the smaller gain prevents
+    // repeated overshoot.
+    cmd.linear.x = clamp(-err_y * ctx_->alignPGain() * gain_scale, -max_speed, max_speed);
+    cmd.linear.y = clamp(-err_x * ctx_->alignPGain() * gain_scale, -max_speed, max_speed);
+    cmd.linear.z = 0.0;
+    ctx_->publishVelocity(cmd);
   }
-  if ((ctx_->node()->now() - start_time_).seconds() > timeout_sec_) { ctx_->publishZeroVelocity(); return BT::NodeStatus::FAILURE; }
+
+  RCLCPP_INFO_THROTTLE(ctx_->node()->get_logger(), *ctx_->node()->get_clock(), 1000,
+    "%s running: err=(%.1f, %.1f) norm=%.1f px tol=%.1f source=%s conf=%.2f elapsed=%.1f/%.1f",
+    name().c_str(), err_x, err_y, pixel_error, pixel_tolerance_px_,
+    target.source.c_str(), static_cast<double>(target.confidence), elapsed, timeout_sec_);
+
+  if (elapsed > timeout_sec_) {
+    ctx_->publishZeroVelocity();
+    RCLCPP_WARN(ctx_->node()->get_logger(),
+      "%s timed out: final error=%.1f px tolerance=%.1f px",
+      name().c_str(), pixel_error, pixel_tolerance_px_);
+    return BT::NodeStatus::FAILURE;
+  }
   return BT::NodeStatus::RUNNING;
 }
 void AlignToTarget::onHalted() { ctx_->publishZeroVelocity(); }
@@ -151,41 +206,77 @@ VerifyBasketPicked::VerifyBasketPicked(const std::string& name, const BT::NodeCo
 : BT::StatefulActionNode(name, config), ctx_(globalContext()) {}
 BT::PortsList VerifyBasketPicked::providedPorts()
 {
-  return {BT::InputPort<std::string>("method", "gripper_feedback_or_visual_invariant", ""), BT::InputPort<double>("lift_test_height_m", 0.5, ""), BT::InputPort<double>("timeout_sec", 10.0, "")};
+  return {
+    BT::InputPort<std::string>("method", "lift_contact_visual", ""),
+    BT::InputPort<double>("lift_test_height_m", 0.5, ""),
+    BT::InputPort<double>("timeout_sec", 12.0, ""),
+    BT::InputPort<double>("stable_duration_sec", 1.5, ""),
+    BT::InputPort<double>("max_center_drift_px", 60.0, ""),
+    BT::InputPort<double>("max_area_change_ratio", 0.35, ""),
+    BT::InputPort<bool>("require_contact", false, ""),
+    BT::InputPort<bool>("require_visual", true, "")
+  };
 }
 BT::NodeStatus VerifyBasketPicked::onStart()
 {
   getInput("lift_test_height_m", lift_test_height_m_);
   getInput("timeout_sec", timeout_sec_);
+  getInput("stable_duration_sec", stable_duration_sec_);
+  getInput("max_center_drift_px", max_center_drift_px_);
+  getInput("max_area_change_ratio", max_area_change_ratio_);
+  getInput("require_contact", require_contact_);
+  getInput("require_visual", require_visual_);
   start_time_ = ctx_->node()->now();
+  evidence_stable_start_ = rclcpp::Time(0, 0, ctx_->node()->get_clock()->get_clock_type());
   if (!ctx_->gripperClosed() && !ctx_->gripperStubSuccess()) {
-    RCLCPP_WARN(ctx_->node()->get_logger(), "VerifyBasketPicked started before gripper close was confirmed.");
+    RCLCPP_WARN(ctx_->node()->get_logger(), "VerifyBasketPicked: gripper close command was not confirmed.");
     return BT::NodeStatus::FAILURE;
   }
+  const auto target = ctx_->targetError();
+  start_center_x_ = target.pixel_err_x;
+  start_center_y_ = target.pixel_err_y;
+  start_bbox_area_ = target.bbox_area;
   start_altitude_m_ = ctx_->relativeAltitude();
   target_altitude_m_ = start_altitude_m_ + std::max(0.0, lift_test_height_m_);
   ctx_->setHoldCurrentPosition();
   ctx_->setHoldAltitude(target_altitude_m_);
-  RCLCPP_INFO(
-    ctx_->node()->get_logger(),
-    "Verifying basket pickup with lift test: start_alt=%.2f target_alt=%.2f timeout=%.1f",
-    start_altitude_m_, target_altitude_m_, timeout_sec_);
+  RCLCPP_INFO(ctx_->node()->get_logger(),
+    "VerifyBasketPicked: lift %.2f->%.2fm, contact_required=%d visual_required=%d",
+    start_altitude_m_, target_altitude_m_, require_contact_, require_visual_);
   return BT::NodeStatus::RUNNING;
 }
 BT::NodeStatus VerifyBasketPicked::onRunning()
 {
-  if (!ctx_->gripperClosed() && !ctx_->gripperStubSuccess()) {
+  if (!ctx_->gripperClosed() && !ctx_->gripperStubSuccess()) return BT::NodeStatus::FAILURE;
+  ctx_->setHoldAltitude(target_altitude_m_);
+  const bool lift_ok = ctx_->relativeAltitude() >= target_altitude_m_ - 0.15;
+  const bool contact_ok = !require_contact_ || ctx_->gripperContact();
+
+  bool visual_ok = !require_visual_;
+  const auto target = ctx_->targetError();
+  if (require_visual_ && target.is_detected && start_bbox_area_ > 1.0 && target.bbox_area > 1.0) {
+    const double center_drift = std::hypot(target.pixel_err_x - start_center_x_, target.pixel_err_y - start_center_y_);
+    const double area_change = std::abs(target.bbox_area - start_bbox_area_) / start_bbox_area_;
+    visual_ok = center_drift <= max_center_drift_px_ && area_change <= max_area_change_ratio_;
+    RCLCPP_INFO_THROTTLE(ctx_->node()->get_logger(), *ctx_->node()->get_clock(), 500,
+      "Verify payload: lift=%d contact=%d visual=%d center_drift=%.1fpx area_change=%.2f",
+      lift_ok, contact_ok, visual_ok, center_drift, area_change);
+  }
+
+  if (lift_ok && contact_ok && visual_ok) {
+    if (evidence_stable_start_.nanoseconds() == 0) evidence_stable_start_ = ctx_->node()->now();
+    if ((ctx_->node()->now() - evidence_stable_start_).seconds() >= stable_duration_sec_) {
+      ctx_->markRescueCompleted();
+      RCLCPP_INFO(ctx_->node()->get_logger(), "Payload verification PASSED.");
+      return BT::NodeStatus::SUCCESS;
+    }
+  } else {
+    evidence_stable_start_ = rclcpp::Time(0, 0, ctx_->node()->get_clock()->get_clock_type());
+  }
+  if ((ctx_->node()->now() - start_time_).seconds() > timeout_sec_) {
+    RCLCPP_WARN(ctx_->node()->get_logger(), "Payload verification FAILED by timeout.");
     return BT::NodeStatus::FAILURE;
   }
-
-  ctx_->setHoldAltitude(target_altitude_m_);
-  if (ctx_->relativeAltitude() >= target_altitude_m_ - 0.15) {
-    ctx_->markRescueCompleted();
-    RCLCPP_INFO(ctx_->node()->get_logger(), "Basket pickup lift test passed at alt=%.2f", ctx_->relativeAltitude());
-    return BT::NodeStatus::SUCCESS;
-  }
-
-  if ((ctx_->node()->now() - start_time_).seconds() > timeout_sec_) return BT::NodeStatus::FAILURE;
   return BT::NodeStatus::RUNNING;
 }
 void VerifyBasketPicked::onHalted() {}

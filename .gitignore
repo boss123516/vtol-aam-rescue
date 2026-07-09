@@ -58,3 +58,14 @@ ros2_ws/log/
 # Large media
 *.mp4
 *.webm
+
+# Local backup files
+*.backup_*
+*.backup_align_*
+*.backup
+
+# Local archives
+docs.zip
+
+# Local fix backups
+.bt_fix_backups/

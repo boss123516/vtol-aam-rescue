@@ -3,6 +3,7 @@ from pathlib import Path
 
 from launch import LaunchDescription
 from launch.actions import DeclareLaunchArgument
+from launch.conditions import IfCondition
 from launch.substitutions import LaunchConfiguration
 from launch_ros.actions import Node
 from ament_index_python.packages import get_package_share_directory
@@ -73,10 +74,21 @@ def generate_launch_description():
             description='Shared camera image topic for yolo_node and vision_tracker '
                         '(must match scripts/run_gz_image_republisher.sh ros_topic)'
         ),
+        DeclareLaunchArgument(
+            'start_yolo_detector',
+            default_value='true',
+            description='Start the point-based yolo_node (/vision/detections). '
+                        'Only needed for DropOperation BT nodes (ActivateYOLO/'
+                        'IsObjectDetected/ExecuteSearchPattern); the rescue-leg '
+                        'precision landing path only needs vision_tracker below, '
+                        'so mission profiles without a drop zone (e.g. krac24_split) '
+                        'can set this to false to save a full extra CPU YOLO pass per frame.'
+        ),
 
         # Point-based detector: feeds /vision/detections, used by DropOperation's
         # ActivateYOLO / IsObjectDetected / ExecuteSearchPattern BT nodes.
         Node(
+            condition=IfCondition(LaunchConfiguration('start_yolo_detector')),
             package='krac_vision',
             executable='yolo_node',
             name='yolo_detector_node',

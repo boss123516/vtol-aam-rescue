@@ -52,6 +52,8 @@ ament_target_dependencies(precision_lander
   geometry_msgs
   krac_interfaces
   std_srvs
+  tf2
+  tf2_geometry_msgs
 )
 
 add_executable(vtol_offboard src/vtol_offboard.cpp)

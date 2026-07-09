@@ -180,6 +180,14 @@ void MissionContext::init_ros_interfaces()
       }
     });
 
+  gripper_contact_sub_ = node_->create_subscription<std_msgs::msg::Bool>(
+    "/gripper/contact", 10,
+    [this](const std_msgs::msg::Bool::SharedPtr msg) {
+      std::lock_guard<std::mutex> lock(mutex_);
+      gripper_contact_ = msg->data;
+      has_gripper_contact_ = true;
+    });
+
   precision_lander_vel_sub_ = node_->create_subscription<geometry_msgs::msg::Twist>(
     "/precision_lander/cmd_vel", 10,
     std::bind(&MissionContext::precisionLanderVelCb, this, std::placeholders::_1));
@@ -259,7 +267,7 @@ bool MissionContext::objectDetected(double min_confidence) const
 {
   std::lock_guard<std::mutex> lock(mutex_);
   return has_vision_ && last_vision_time_.nanoseconds() > 0 &&
-         (node_->now() - last_vision_time_).seconds() < 0.8 &&
+         (node_->now() - last_vision_time_).seconds() < 2.5 &&
          vision_error_.z >= min_confidence;
 }
 

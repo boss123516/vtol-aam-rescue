@@ -9,6 +9,7 @@ from rclpy.node import Node
 from rclpy.qos import qos_profile_sensor_data
 from sensor_msgs.msg import Image
 from geometry_msgs.msg import PoseStamped, Twist
+from std_msgs.msg import String
 from krac_interfaces.msg import TargetError
 from cv_bridge import CvBridge
 from ament_index_python.packages import get_package_share_directory
@@ -42,6 +43,8 @@ class VisionTracker(Node):
         self.error_pub = self.create_publisher(TargetError, '/vision/target_error', 10)
         self.dbg_pub = self.create_publisher(Image, '/vision/dbg_image', 10)
         self.hold_timer = self.create_timer(0.1, self.hold_publish_cb)
+        self.target_class = 'basket'
+        self.target_sub = self.create_subscription(String, '/camera/set_target', self.target_cb, 10)
 
         self.current_alt = 0.0
         self.current_cmd = Twist()
@@ -77,6 +80,17 @@ class VisionTracker(Node):
         self.kf.processNoiseCov = np.eye(4, dtype=np.float32) * 0.03
         self.kf_initialized = False
 
+    def target_cb(self, msg):
+        new_target = msg.data.strip().lower()
+        if not new_target or new_target == self.target_class:
+            return
+        self.get_logger().info(f"vision target changed: {self.target_class} -> {new_target}")
+        self.target_class = new_target
+        self.kf_initialized = False
+        self._held_target_msg = None
+        self._last_detection_time = 0.0
+        self._last_target_publish_time = 0.0
+
     def pose_cb(self, msg):
         self.current_alt = msg.pose.position.z
 
@@ -99,12 +113,19 @@ class VisionTracker(Node):
 
         target_msg = TargetError()
         target_msg.is_detected = False
+        target_msg.target_class = self.target_class
+        target_msg.source = 'LOST'
+        target_msg.confidence = 0.0
+        target_msg.bbox_width = 0.0
+        target_msg.bbox_height = 0.0
+        target_msg.bbox_area = 0.0
 
         dist_px = 0.0
         theta_val = 0.0
         tracking_mode = "LOST"
 
         best_cx, best_cy, best_theta = 0.0, 0.0, 0.0
+        best_bbox_w, best_bbox_h, best_conf = 0.0, 0.0, 0.0
         is_found = False
 
         # =======================================================
@@ -127,6 +148,9 @@ class VisionTracker(Node):
             dx = c[1][0] - c[0][0]
             dy = c[1][1] - c[0][1]
             best_theta = math.atan2(dy, dx)
+            best_bbox_w = float(np.linalg.norm(c[1] - c[0]))
+            best_bbox_h = float(np.linalg.norm(c[2] - c[1]))
+            best_conf = 1.0
 
             is_found = True
             tracking_mode = f"ArUco (ID: {ids[0][0]})"
@@ -150,8 +174,22 @@ class VisionTracker(Node):
             results = self.model(resized_img, imgsz=self.img_size, conf=self.obb_confidence, verbose=False)
 
             if len(results[0].obb) > 0:
-                best_obb = results[0].obb[0]
+                best_obb = None
+                selected_conf = -1.0
+                for obb in results[0].obb:
+                    cls_id = int(obb.cls[0]) if obb.cls is not None else -1
+                    label = str(self.model.names.get(cls_id, cls_id)).lower()
+                    conf = float(obb.conf[0]) if obb.conf is not None else 0.0
+                    if self.target_class not in ('all', label):
+                        continue
+                    if conf > selected_conf:
+                        selected_conf = conf
+                        best_obb = obb
+                if best_obb is None:
+                    best_obb = results[0].obb[0]
+                    selected_conf = float(best_obb.conf[0]) if best_obb.conf is not None else 0.0
                 yolo_cx, yolo_cy = float(best_obb.xywhr[0][0]), float(best_obb.xywhr[0][1])
+                yolo_w, yolo_h = float(best_obb.xywhr[0][2]), float(best_obb.xywhr[0][3])
                 yolo_theta = float(best_obb.xywhr[0][4])
 
                 # 디버그용 폴리곤 그리기 (파란색)
@@ -166,6 +204,9 @@ class VisionTracker(Node):
                     best_cx = yolo_cx
                     best_cy = yolo_cy
                     best_theta = yolo_theta
+                    best_bbox_w = yolo_w
+                    best_bbox_h = yolo_h
+                    best_conf = selected_conf
                     is_found = True
                     tracking_mode = "YOLO (OBB)"
 
@@ -189,6 +230,12 @@ class VisionTracker(Node):
             target_msg.pixel_err_y = self.center_y - filtered_cy
             target_msg.yaw_err_rad = theta_val
             target_msg.is_detected = True
+            target_msg.target_class = self.target_class
+            target_msg.source = tracking_mode
+            target_msg.confidence = float(best_conf)
+            target_msg.bbox_width = float(best_bbox_w)
+            target_msg.bbox_height = float(best_bbox_h)
+            target_msg.bbox_area = float(best_bbox_w * best_bbox_h)
             self._last_detection_time = time.monotonic()
 
             dist_px = math.hypot(target_msg.pixel_err_x, target_msg.pixel_err_y)
@@ -209,6 +256,8 @@ class VisionTracker(Node):
                 target_msg.pixel_err_y = self.center_y - predicted[1][0]
                 recently_detected = (time.monotonic() - self._last_detection_time) <= self.tracking_hold_sec
                 target_msg.is_detected = bool(recently_detected)
+                target_msg.target_class = self.target_class
+                target_msg.source = 'KF_HOLD' if recently_detected else 'LOST'
 
                 t_x, t_y = int(predicted[0][0]), int(predicted[1][0])
                 cv2.circle(dbg_img, (t_x, t_y), 6, (150, 150, 150), -1)
