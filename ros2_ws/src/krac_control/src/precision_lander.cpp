@@ -92,8 +92,8 @@ private:
 
     // 고도 강하 파라미터
     const double SEARCH_ALTITUDE = 7.0;
-    const double BLIND_DESCENT_SPEED = -0.20;
-    const double PRECISION_DESCEND_SPEED = -0.4;
+    const double BLIND_DESCENT_SPEED = -0.12;
+    const double PRECISION_DESCEND_SPEED = -0.35;
     const double TARGET_FRESH_MAX_AGE_SEC = 3.0;
 
     rclcpp::Publisher<geometry_msgs::msg::Twist>::SharedPtr vel_pub_;
@@ -156,7 +156,9 @@ private:
             if (has_been_aligned_) {
                 vel_cmd.linear.x = 0.0;
                 vel_cmd.linear.y = 0.0;
-                vel_cmd.linear.z = PRECISION_DESCEND_SPEED;
+                vel_cmd.linear.z =
+                    current_alt_ < 0.35 ? -0.08 :
+                    (current_alt_ < 0.70 ? BLIND_DESCENT_SPEED : -0.18);
                 vel_cmd.angular.z = 0.0;
                 RCLCPP_WARN_THROTTLE(this->get_logger(), *this->get_clock(), 1000,
                     "[Target LOST after alignment, alt=%.2fm] continuing committed blind descent.",
@@ -271,7 +273,8 @@ private:
             last_aligned_time_ = this->now();
             has_been_aligned_ = true;
             vel_cmd.linear.z =
-                current_alt_ < 0.7 ? BLIND_DESCENT_SPEED : PRECISION_DESCEND_SPEED;
+                current_alt_ < 0.35 ? -0.08 :
+                (current_alt_ < 0.70 ? BLIND_DESCENT_SPEED : PRECISION_DESCEND_SPEED);
             RCLCPP_INFO_THROTTLE(this->get_logger(), *this->get_clock(), 1000,
                 "🎯 [Aligned] 정밀 하강 중 (오차: %.2fm, 각도: %.1f도, 고도: %.1fm)", dist_m, yaw_deg, current_alt_);
         } else if (dist_m < 0.70) {

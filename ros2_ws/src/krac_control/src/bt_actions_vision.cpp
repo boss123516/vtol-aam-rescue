@@ -250,7 +250,9 @@ BT::NodeStatus VerifyBasketPicked::onRunning()
   if (!ctx_->gripperClosed() && !ctx_->gripperStubSuccess()) return BT::NodeStatus::FAILURE;
   ctx_->setHoldAltitude(target_altitude_m_);
   const bool lift_ok = ctx_->relativeAltitude() >= target_altitude_m_ - 0.15;
-  const bool contact_ok = !require_contact_ || ctx_->gripperContact();
+  const bool contact_feedback = ctx_->hasGripperContactFeedback();
+  const bool contact_ok =
+    !require_contact_ || (contact_feedback && ctx_->gripperContact());
 
   bool visual_ok = !require_visual_;
   const auto target = ctx_->targetError();
@@ -261,6 +263,18 @@ BT::NodeStatus VerifyBasketPicked::onRunning()
     RCLCPP_INFO_THROTTLE(ctx_->node()->get_logger(), *ctx_->node()->get_clock(), 500,
       "Verify payload: lift=%d contact=%d visual=%d center_drift=%.1fpx area_change=%.2f",
       lift_ok, contact_ok, visual_ok, center_drift, area_change);
+  }
+
+  RCLCPP_INFO_THROTTLE(
+    ctx_->node()->get_logger(), *ctx_->node()->get_clock(), 500,
+    "Verify payload evidence: lift=%d contact_feedback=%d contact=%d visual=%d alt=%.2f target_alt=%.2f",
+    lift_ok, contact_feedback, contact_ok, visual_ok,
+    ctx_->relativeAltitude(), target_altitude_m_);
+
+  if (require_contact_ && !contact_feedback) {
+    RCLCPP_WARN_THROTTLE(
+      ctx_->node()->get_logger(), *ctx_->node()->get_clock(), 1000,
+      "VerifyBasketPicked requires contact, but neither /gripper/contact nor /survivor_tray_rep/gripper_state has published.");
   }
 
   if (lift_ok && contact_ok && visual_ok) {

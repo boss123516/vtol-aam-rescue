@@ -188,6 +188,19 @@ void MissionContext::init_ros_interfaces()
       has_gripper_contact_ = true;
     });
 
+  // Simulator adapter: gz detachable-joint state. Real hardware continues
+  // to publish /gripper/contact, so the BT uses one common contact API.
+  sim_gripper_contact_sub_ = node_->create_subscription<std_msgs::msg::Bool>(
+    "/survivor_tray_rep/gripper_state", 10,
+    [this](const std_msgs::msg::Bool::SharedPtr msg) {
+      std::lock_guard<std::mutex> lock(mutex_);
+      gripper_contact_ = msg->data;
+      has_gripper_contact_ = true;
+      RCLCPP_INFO(
+        node_->get_logger(), "Simulator payload joint state: %s",
+        msg->data ? "ATTACHED" : "DETACHED");
+    });
+
   precision_lander_vel_sub_ = node_->create_subscription<geometry_msgs::msg::Twist>(
     "/precision_lander/cmd_vel", 10,
     std::bind(&MissionContext::precisionLanderVelCb, this, std::placeholders::_1));
@@ -391,17 +404,26 @@ void MissionContext::precisionLanderVelCb(const geometry_msgs::msg::Twist::Share
 
 void MissionContext::setPrecisionLanderEnabled(bool enable)
 {
+  // Do not publish the old 3 m global hold while precision_lander publishes
+  // downward velocity. Those two controllers previously fought each other.
+  if (enable) {
+    stopOffboardSetpointStream();
+  }
+
   {
     std::lock_guard<std::mutex> lock(mutex_);
     precision_lander_active_ = enable;
   }
+
   if (!enable) {
     publishZeroVelocity();
   }
+
   if (!precision_lander_enable_client_->wait_for_service(std::chrono::milliseconds(200))) {
     RCLCPP_WARN(node_->get_logger(), "/precision_lander/enable service unavailable");
     return;
   }
+
   auto req = std::make_shared<std_srvs::srv::SetBool::Request>();
   req->data = enable;
   precision_lander_enable_client_->async_send_request(req);
@@ -432,6 +454,8 @@ void MissionContext::startOffboardSetpointStream(double rate_hz, const std::stri
   offboard_stream_active_ = true;
   offboard_stream_mode_ = mode;
   offboard_rate_hz_ = std::max(2.0, rate_hz);
+  setpoint_pub_times_.clear();
+
   if (has_gps_) {
     double alt = 0.0;
     if (has_rel_alt_) alt = rel_alt_.data;
@@ -439,6 +463,7 @@ void MissionContext::startOffboardSetpointStream(double rate_hz, const std::stri
     hold_gps_ = GPSPoint{gps_.latitude, gps_.longitude, alt, true};
     hold_alt_m_ = alt;
   }
+
   const auto period = std::chrono::duration<double>(1.0 / offboard_rate_hz_);
   offboard_timer_ = node_->create_wall_timer(
     std::chrono::duration_cast<std::chrono::nanoseconds>(period),
@@ -450,6 +475,7 @@ void MissionContext::stopOffboardSetpointStream()
   std::lock_guard<std::mutex> lock(mutex_);
   offboard_stream_active_ = false;
   offboard_timer_.reset();
+  setpoint_pub_times_.clear();
 }
 
 void MissionContext::setHoldCurrentPosition()
@@ -486,7 +512,7 @@ void MissionContext::offboardTimerCb()
   mavros_msgs::msg::GlobalPositionTarget msg;
   {
     std::lock_guard<std::mutex> lock(mutex_);
-    if (!offboard_stream_active_) return;
+    if (!offboard_stream_active_ || precision_lander_active_) return;
     msg.header.stamp = node_->now();
     msg.coordinate_frame = mavros_msgs::msg::GlobalPositionTarget::FRAME_GLOBAL_REL_ALT;
     msg.type_mask =
@@ -524,18 +550,56 @@ void MissionContext::recordSetpointStamp()
   }
 }
 
-bool MissionContext::offboardStreamAlive(double min_rate_hz, double stable_duration_sec) const
+bool MissionContext::offboardStreamAlive(
+  double min_rate_hz, double stable_duration_sec) const
 {
   std::lock_guard<std::mutex> lock(mutex_);
-  if (!offboard_stream_active_ || setpoint_pub_times_.size() < 2) return false;
-  const auto now = node_->now();
-  if ((now - setpoint_pub_times_.back()).seconds() > 0.5) return false;
-  const double window = std::min(3.0, std::max(0.5, stable_duration_sec));
-  int count = 0;
-  for (const auto& t : setpoint_pub_times_) {
-    if ((now - t).seconds() <= window) count++;
+
+  if (!offboard_stream_active_ || setpoint_pub_times_.size() < 2) {
+    return false;
   }
-  return (count / window) >= min_rate_hz;
+
+  const auto now = node_->now();
+  if ((now - setpoint_pub_times_.back()).seconds() > 0.5) {
+    return false;
+  }
+
+  const double required_span =
+    std::max(0.5, std::min(3.0, stable_duration_sec));
+
+  int count = 0;
+  rclcpp::Time first_in_window(0, 0, node_->get_clock()->get_clock_type());
+  rclcpp::Time last_in_window(0, 0, node_->get_clock()->get_clock_type());
+
+  for (const auto& stamp : setpoint_pub_times_) {
+    if ((now - stamp).seconds() <= required_span + 0.25) {
+      if (count == 0) {
+        first_in_window = stamp;
+      }
+      last_in_window = stamp;
+      ++count;
+    }
+  }
+
+  if (count < 2) {
+    return false;
+  }
+
+  const double actual_span = (last_in_window - first_in_window).seconds();
+  const double actual_rate =
+    actual_span > 1e-3 ? static_cast<double>(count - 1) / actual_span : 0.0;
+
+  const bool span_ok = actual_span >= required_span * 0.90;
+  const bool rate_ok = actual_rate >= min_rate_hz;
+
+  RCLCPP_INFO_THROTTLE(
+    node_->get_logger(), *node_->get_clock(), 500,
+    "OFFBOARD readiness: samples=%d span=%.2fs rate=%.1fHz "
+    "required_span=%.2fs min_rate=%.1fHz ready=%d",
+    count, actual_span, actual_rate, required_span, min_rate_hz,
+    span_ok && rate_ok);
+
+  return span_ok && rate_ok;
 }
 
 void MissionContext::publishVelocity(const geometry_msgs::msg::Twist& cmd)

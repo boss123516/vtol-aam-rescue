@@ -60,6 +60,7 @@ ros2 run ros_gz_bridge parameter_bridge \
   "/model/${GZ_MODEL_NAME}/servo_6@std_msgs/msg/Float64]gz.msgs.Double" \
   "/survivor_tray_rep/attach@std_msgs/msg/Empty]gz.msgs.Empty" \
   "/survivor_tray_rep/detach@std_msgs/msg/Empty]gz.msgs.Empty" \
+  "/survivor_tray_rep/gripper_state@std_msgs/msg/Bool[gz.msgs.Boolean" \
   >"$RUN_LOG_DIR/gripper_bridge.log" 2>&1 &
 GRIPPER_BRIDGE_PID=$!
 

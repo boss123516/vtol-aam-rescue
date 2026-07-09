@@ -279,97 +279,78 @@ BT::NodeStatus FlyToLocalPoint::onStart()
   getInput("max_xy_speed_mps", max_xy_speed_mps_);
   getInput("max_z_speed_mps", max_z_speed_mps_);
   getInput("timeout_sec", timeout_sec_);
+
   start_time_ = ctx_->node()->now();
   target_gps_ = GPSPoint{};
+  ctx_->stopOffboardSetpointStream();
+
   RCLCPP_INFO(
     ctx_->node()->get_logger(),
-    "FlyToLocalPoint target local ENU x=%.1f y=%.1f z=%.1f, tolerance xy=%.1f z=%.1f",
+    "FlyToLocalPoint target local ENU x=%.2f y=%.2f z=%.2f, tolerance xy=%.2f z=%.2f",
     x_m_, y_m_, z_m_, xy_tolerance_m_, z_tolerance_m_);
   return BT::NodeStatus::RUNNING;
 }
 BT::NodeStatus FlyToLocalPoint::onRunning()
 {
-  double current_x = 0.0;
-  double current_y = 0.0;
-  double current_z = 0.0;
-  double dx = 0.0;
-  double dy = 0.0;
-  double dz = 0.0;
-
-  const auto home = ctx_->homePoint();
-  const auto current_gps = ctx_->currentGps();
-  if (current_gps.valid && home.valid) {
-    if (!target_gps_.valid) {
-      target_gps_ = gpsFromLocalOffset(home, x_m_, y_m_, z_m_);
-      RCLCPP_INFO(
-        ctx_->node()->get_logger(),
-        "FlyToLocalPoint set OFFBOARD global target for REP: lat=%.8f lon=%.8f alt=%.1f",
-        target_gps_.lat, target_gps_.lon, target_gps_.alt);
+  if (!ctx_->hasLocalPose()) {
+    if ((ctx_->node()->now() - start_time_).seconds() > timeout_sec_) {
+      RCLCPP_WARN(ctx_->node()->get_logger(),
+        "FlyToLocalPoint timed out waiting for MAVROS local pose.");
+      return BT::NodeStatus::FAILURE;
     }
-    ctx_->setHoldGps(target_gps_);
-    gpsErrorToEnu(current_gps, target_gps_, dx, dy);
-    current_x = x_m_ - dx;
-    current_y = y_m_ - dy;
-    current_z = current_gps.alt;
-    dz = z_m_ - current_gps.alt;
-  } else if (ctx_->hasLocalPose()) {
-    const auto pose = ctx_->localPose();
-    const auto& pos = pose.pose.position;
-    current_x = pos.x;
-    current_y = pos.y;
-    current_z = pos.z;
-    dx = x_m_ - pos.x;
-    dy = y_m_ - pos.y;
-    dz = z_m_ - pos.z;
-  } else {
-    if ((ctx_->node()->now() - start_time_).seconds() > timeout_sec_) return BT::NodeStatus::FAILURE;
     RCLCPP_WARN_THROTTLE(
       ctx_->node()->get_logger(), *ctx_->node()->get_clock(), 1000,
-      "FlyToLocalPoint waiting for local pose or GPS input.");
+      "FlyToLocalPoint waiting for /mavros/local_position/pose.");
+    ctx_->publishZeroVelocity();
     return BT::NodeStatus::RUNNING;
   }
 
+  const auto pose = ctx_->localPose();
+  const auto& pos = pose.pose.position;
+  const double dx = x_m_ - pos.x;
+  const double dy = y_m_ - pos.y;
+  const double dz = z_m_ - pos.z;
   const double xy_dist = std::hypot(dx, dy);
 
   if (xy_dist <= xy_tolerance_m_ && std::abs(dz) <= z_tolerance_m_) {
     ctx_->publishZeroVelocity();
+    ctx_->setHoldCurrentPosition();
+    ctx_->startOffboardSetpointStream(20.0, "hold_current_pose");
     RCLCPP_INFO(
       ctx_->node()->get_logger(),
-      "FlyToLocalPoint reached target: current x=%.1f y=%.1f z=%.1f, xy_dist=%.2f dz=%.2f",
-      current_x, current_y, current_z, xy_dist, dz);
+      "FlyToLocalPoint reached local target: current=(%.2f, %.2f, %.2f) xy_dist=%.2f dz=%.2f",
+      pos.x, pos.y, pos.z, xy_dist, dz);
     return BT::NodeStatus::SUCCESS;
   }
 
   if ((ctx_->node()->now() - start_time_).seconds() > timeout_sec_) {
     ctx_->publishZeroVelocity();
+    ctx_->setHoldCurrentPosition();
+    ctx_->startOffboardSetpointStream(20.0, "hold_current_pose");
     RCLCPP_WARN(
       ctx_->node()->get_logger(),
-      "FlyToLocalPoint timed out: current x=%.1f y=%.1f z=%.1f, target x=%.1f y=%.1f z=%.1f, xy_dist=%.2f dz=%.2f",
-      current_x, current_y, current_z, x_m_, y_m_, z_m_, xy_dist, dz);
+      "FlyToLocalPoint timed out: current=(%.2f, %.2f, %.2f) target=(%.2f, %.2f, %.2f) xy_dist=%.2f dz=%.2f",
+      pos.x, pos.y, pos.z, x_m_, y_m_, z_m_, xy_dist, dz);
     return BT::NodeStatus::FAILURE;
   }
 
-  if (target_gps_.valid) {
-    RCLCPP_INFO_THROTTLE(
-      ctx_->node()->get_logger(), *ctx_->node()->get_clock(), 1000,
-      "FlyToLocalPoint holding OFFBOARD global REP setpoint: current x=%.1f y=%.1f z=%.1f, xy_dist=%.1f dz=%.1f",
-      current_x, current_y, current_z, xy_dist, dz);
-    return BT::NodeStatus::RUNNING;
-  }
-
   geometry_msgs::msg::Twist cmd;
-  if (xy_dist > 1e-3) {
-    const double speed_xy = std::min(max_xy_speed_mps_, std::max(0.4, xy_dist * 0.6));
+  if (xy_dist > 0.03) {
+    const double speed_xy =
+      std::min(max_xy_speed_mps_, std::max(0.08, xy_dist * 0.55));
     cmd.linear.x = dx / xy_dist * speed_xy;
     cmd.linear.y = dy / xy_dist * speed_xy;
   }
-  cmd.linear.z = clamp(dz * 0.5, -max_z_speed_mps_, max_z_speed_mps_);
+
+  cmd.linear.z = clamp(dz * 0.60, -max_z_speed_mps_, max_z_speed_mps_);
+  if (std::abs(dz) < 0.08) cmd.linear.z = 0.0;
   ctx_->publishVelocity(cmd);
 
   RCLCPP_INFO_THROTTLE(
     ctx_->node()->get_logger(), *ctx_->node()->get_clock(), 1000,
-    "FlyToLocalPoint moving: current x=%.1f y=%.1f z=%.1f, xy_dist=%.1f dz=%.1f, cmd=(%.2f, %.2f, %.2f)",
-    current_x, current_y, current_z, xy_dist, dz, cmd.linear.x, cmd.linear.y, cmd.linear.z);
+    "FlyToLocalPoint local control: current=(%.2f, %.2f, %.2f) xy_dist=%.2f dz=%.2f cmd=(%.2f, %.2f, %.2f)",
+    pos.x, pos.y, pos.z, xy_dist, dz,
+    cmd.linear.x, cmd.linear.y, cmd.linear.z);
   return BT::NodeStatus::RUNNING;
 }
 void FlyToLocalPoint::onHalted() { ctx_->publishZeroVelocity(); }
@@ -385,24 +366,58 @@ BT::NodeStatus AlignHeadingToWaypoint::onStart()
   getInput("seq", seq_);
   getInput("tolerance_rad", tolerance_rad_);
   getInput("timeout_sec", timeout_sec_);
+
+  ctx_->stopOffboardSetpointStream();
   target_yaw_rad_ = ctx_->computeBearingToWaypoint(seq_);
   start_time_ = ctx_->node()->now();
+
+  RCLCPP_INFO(
+    ctx_->node()->get_logger(),
+    "AlignHeadingToWaypoint seq=%d target=%.1fdeg current=%.1fdeg",
+    seq_, target_yaw_rad_ * 180.0 / M_PI,
+    ctx_->currentYaw() * 180.0 / M_PI);
   return BT::NodeStatus::RUNNING;
 }
 BT::NodeStatus AlignHeadingToWaypoint::onRunning()
 {
-  const double yaw_err = wrapPi(target_yaw_rad_ - ctx_->currentYaw());
+  const double current_yaw = ctx_->currentYaw();
+  const double yaw_err = wrapPi(target_yaw_rad_ - current_yaw);
+
   if (std::abs(yaw_err) < tolerance_rad_) {
     ctx_->publishZeroVelocity();
+    ctx_->setHoldCurrentPosition();
+    ctx_->startOffboardSetpointStream(20.0, "hold_current_pose");
+    RCLCPP_INFO(
+      ctx_->node()->get_logger(),
+      "AlignHeadingToWaypoint aligned: target=%.1fdeg current=%.1fdeg err=%.1fdeg",
+      target_yaw_rad_ * 180.0 / M_PI,
+      current_yaw * 180.0 / M_PI,
+      yaw_err * 180.0 / M_PI);
     return BT::NodeStatus::SUCCESS;
   }
+
   geometry_msgs::msg::Twist cmd;
-  cmd.angular.z = clamp(yaw_err * 0.8, -0.5, 0.5);
+  cmd.angular.z = clamp(yaw_err * 0.9, -0.45, 0.45);
   ctx_->publishVelocity(cmd);
+
+  RCLCPP_INFO_THROTTLE(
+    ctx_->node()->get_logger(), *ctx_->node()->get_clock(), 500,
+    "AlignHeadingToWaypoint rotating: target=%.1fdeg current=%.1fdeg err=%.1fdeg yaw_rate=%.2f",
+    target_yaw_rad_ * 180.0 / M_PI,
+    current_yaw * 180.0 / M_PI,
+    yaw_err * 180.0 / M_PI,
+    cmd.angular.z);
+
   if ((ctx_->node()->now() - start_time_).seconds() > timeout_sec_) {
     ctx_->publishZeroVelocity();
-    RCLCPP_WARN(ctx_->node()->get_logger(),
-      "AlignHeadingToWaypoint timed out; refusing FW transition.");
+    ctx_->setHoldCurrentPosition();
+    ctx_->startOffboardSetpointStream(20.0, "hold_current_pose");
+    RCLCPP_WARN(
+      ctx_->node()->get_logger(),
+      "AlignHeadingToWaypoint timed out: target=%.1fdeg current=%.1fdeg err=%.1fdeg; refusing FW transition.",
+      target_yaw_rad_ * 180.0 / M_PI,
+      current_yaw * 180.0 / M_PI,
+      yaw_err * 180.0 / M_PI);
     return BT::NodeStatus::FAILURE;
   }
   return BT::NodeStatus::RUNNING;

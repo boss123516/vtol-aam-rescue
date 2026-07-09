@@ -233,6 +233,7 @@ private:
   rclcpp::Subscription<krac_interfaces::msg::TargetError>::SharedPtr target_error_sub_;
   rclcpp::Subscription<geometry_msgs::msg::Twist>::SharedPtr precision_lander_vel_sub_;
   rclcpp::Subscription<std_msgs::msg::Bool>::SharedPtr gripper_contact_sub_;
+  rclcpp::Subscription<std_msgs::msg::Bool>::SharedPtr sim_gripper_contact_sub_;
 
   rclcpp::Publisher<mavros_msgs::msg::GlobalPositionTarget>::SharedPtr global_setpoint_pub_;
   rclcpp::Publisher<geometry_msgs::msg::Twist>::SharedPtr velocity_pub_;
