@@ -27,6 +27,7 @@ APPLY_PX4_ASSETS="${APPLY_PX4_ASSETS:-true}"
 START_AUTO_SPAWN="${START_AUTO_SPAWN:-true}"
 START_IMAGE_REPUBLISHER="${START_IMAGE_REPUBLISHER:-true}"
 START_VISION_BT="${START_VISION_BT:-true}"
+START_RESCUE_PLACEHOLDER="${START_RESCUE_PLACEHOLDER:-true}"
 START_RQT_GRAPH="${START_RQT_GRAPH:-false}"
 START_VISION_VIEW="${START_VISION_VIEW:-false}"
 VISION_DEBUG_TOPIC="${VISION_DEBUG_TOPIC:-/vision/dbg_image}"
@@ -147,6 +148,11 @@ if [[ "${START_AUTO_SPAWN}" == "true" ]]; then
     exec "$REPO_DIR/scripts/auto_spawn.sh"
   ) >"$RUN_LOG_DIR/auto_spawn.log" 2>&1 &
   SUPPORT_PIDS+=("$!")
+fi
+
+if [[ "${START_RESCUE_PLACEHOLDER}" == "true" ]]; then
+  start_support_process "Rescue placeholder" \
+    ros2 run krac_control rescue_controller_placeholder.py
 fi
 
 if [[ "${START_IMAGE_REPUBLISHER}" == "true" ]]; then

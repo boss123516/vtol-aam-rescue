@@ -1,6 +1,8 @@
 #include "krac_control/bt/bt_actions_basic.hpp"
 #include "krac_control/bt/bt_conditions.hpp"
 
+#include <algorithm>
+#include <cctype>
 #include <chrono>
 #include <thread>
 
@@ -292,5 +294,229 @@ BT::NodeStatus CloseGripper::onRunning()
   return BT::NodeStatus::RUNNING;
 }
 void CloseGripper::onHalted() {}
+
+
+ExecuteExternalRescueModule::ExecuteExternalRescueModule(
+  const std::string& name,
+  const BT::NodeConfiguration& config)
+: BT::StatefulActionNode(name, config),
+  ctx_(globalContext()),
+  start_time_(0, 0, ctx_->node()->get_clock()->get_clock_type()),
+  takeover_time_(0, 0, ctx_->node()->get_clock()->get_clock_type()),
+  phase_time_(0, 0, ctx_->node()->get_clock()->get_clock_type()),
+  last_enable_publish_time_(0, 0, ctx_->node()->get_clock()->get_clock_type())
+{
+}
+
+BT::PortsList ExecuteExternalRescueModule::providedPorts()
+{
+  return {
+    BT::InputPort<std::string>("enable_topic", "/krac/rescue_module/enable", ""),
+    BT::InputPort<std::string>("ready_topic", "/krac/rescue_module/ready", ""),
+    BT::InputPort<std::string>("result_topic", "/krac/rescue_module/result", ""),
+    BT::InputPort<double>("request_rate_hz", 2.0, ""),
+    BT::InputPort<double>("handover_timeout_sec", 15.0, ""),
+    BT::InputPort<double>("execution_timeout_sec", 240.0, ""),
+    BT::InputPort<double>("handback_hold_sec", 1.0, "")
+  };
+}
+
+void ExecuteExternalRescueModule::publishEnable(bool enabled)
+{
+  if (!enable_pub_) return;
+  std_msgs::msg::Bool msg;
+  msg.data = enabled;
+  enable_pub_->publish(msg);
+  last_enable_publish_time_ = ctx_->node()->now();
+}
+
+void ExecuteExternalRescueModule::beginHandback(
+  bool success,
+  const std::string& result_text)
+{
+  final_success_ = success;
+  ctx_->setHoldCurrentPosition();
+  ctx_->startOffboardSetpointStream(20.0, "hold_current_pose");
+  publishEnable(false);
+  phase_ = Phase::HANDBACK;
+  phase_time_ = ctx_->node()->now();
+
+  RCLCPP_INFO(
+    ctx_->node()->get_logger(),
+    "External rescue result received: %s; BT hold restored.",
+    result_text.c_str());
+}
+
+BT::NodeStatus ExecuteExternalRescueModule::onStart()
+{
+  getInput("enable_topic", enable_topic_);
+  getInput("ready_topic", ready_topic_);
+  getInput("result_topic", result_topic_);
+  getInput("request_rate_hz", request_rate_hz_);
+  getInput("handover_timeout_sec", handover_timeout_sec_);
+  getInput("execution_timeout_sec", execution_timeout_sec_);
+  getInput("handback_hold_sec", handback_hold_sec_);
+
+  request_rate_hz_ = std::max(0.5, request_rate_hz_);
+  handover_timeout_sec_ = std::max(1.0, handover_timeout_sec_);
+  execution_timeout_sec_ = std::max(1.0, execution_timeout_sec_);
+  handback_hold_sec_ = std::max(0.2, handback_hold_sec_);
+
+  {
+    std::lock_guard<std::mutex> lock(signal_mutex_);
+    ready_received_ = false;
+    result_received_ = false;
+    result_success_ = false;
+    result_text_.clear();
+  }
+
+  enable_pub_ =
+    ctx_->node()->create_publisher<std_msgs::msg::Bool>(enable_topic_, 10);
+
+  ready_sub_ =
+    ctx_->node()->create_subscription<std_msgs::msg::Bool>(
+      ready_topic_, 10,
+      [this](const std_msgs::msg::Bool::SharedPtr msg) {
+        if (!msg->data) return;
+        std::lock_guard<std::mutex> lock(signal_mutex_);
+        ready_received_ = true;
+      });
+
+  result_sub_ =
+    ctx_->node()->create_subscription<std_msgs::msg::String>(
+      result_topic_, 10,
+      [this](const std_msgs::msg::String::SharedPtr msg) {
+        std::string normalized = msg->data;
+        std::transform(
+          normalized.begin(), normalized.end(), normalized.begin(),
+          [](unsigned char c) {
+            return static_cast<char>(std::toupper(c));
+          });
+
+        const bool success = normalized.rfind("SUCCESS", 0) == 0;
+        const bool failure = normalized.rfind("FAILURE", 0) == 0;
+        if (!success && !failure) return;
+
+        std::lock_guard<std::mutex> lock(signal_mutex_);
+        result_received_ = true;
+        result_success_ = success;
+        result_text_ = msg->data;
+      });
+
+  ctx_->setHoldCurrentPosition();
+  ctx_->startOffboardSetpointStream(20.0, "hold_current_pose");
+
+  start_time_ = ctx_->node()->now();
+  takeover_time_ =
+    rclcpp::Time(0, 0, ctx_->node()->get_clock()->get_clock_type());
+  phase_time_ = start_time_;
+  last_enable_publish_time_ =
+    rclcpp::Time(0, 0, ctx_->node()->get_clock()->get_clock_type());
+  phase_ = Phase::WAIT_READY;
+  final_success_ = false;
+
+  publishEnable(true);
+
+  RCLCPP_INFO(
+    ctx_->node()->get_logger(),
+    "External rescue requested. BT hold remains active until ready=true.");
+
+  return BT::NodeStatus::RUNNING;
+}
+
+BT::NodeStatus ExecuteExternalRescueModule::onRunning()
+{
+  const auto now = ctx_->node()->now();
+  const double request_period = 1.0 / request_rate_hz_;
+
+  if (
+    phase_ != Phase::HANDBACK &&
+    (
+      last_enable_publish_time_.nanoseconds() == 0 ||
+      (now - last_enable_publish_time_).seconds() >= request_period
+    ))
+  {
+    publishEnable(true);
+  }
+
+  bool ready = false;
+  bool got_result = false;
+  bool success = false;
+  std::string result;
+
+  {
+    std::lock_guard<std::mutex> lock(signal_mutex_);
+    ready = ready_received_;
+    got_result = result_received_;
+    success = result_success_;
+    result = result_text_;
+  }
+
+  if (phase_ == Phase::WAIT_READY) {
+    if (ready) {
+      {
+        std::lock_guard<std::mutex> lock(signal_mutex_);
+        // Ignore any result message that arrived before control takeover.
+        result_received_ = false;
+        result_success_ = false;
+        result_text_.clear();
+      }
+
+      ctx_->stopOffboardSetpointStream();
+      takeover_time_ = now;
+      phase_time_ = now;
+      phase_ = Phase::EXECUTING;
+
+      RCLCPP_INFO(
+        ctx_->node()->get_logger(),
+        "External rescue controller READY; BT hold stream released.");
+
+      return BT::NodeStatus::RUNNING;
+    }
+
+    if ((now - start_time_).seconds() > handover_timeout_sec_) {
+      beginHandback(false, "FAILURE:ready_timeout");
+    }
+
+    return BT::NodeStatus::RUNNING;
+  }
+
+  if (phase_ == Phase::EXECUTING) {
+    if (got_result) {
+      beginHandback(success, result);
+      return BT::NodeStatus::RUNNING;
+    }
+
+    if ((now - takeover_time_).seconds() > execution_timeout_sec_) {
+      beginHandback(false, "FAILURE:execution_timeout");
+    }
+
+    return BT::NodeStatus::RUNNING;
+  }
+
+  if ((now - phase_time_).seconds() >= handback_hold_sec_) {
+    RCLCPP_INFO(
+      ctx_->node()->get_logger(),
+      "External rescue handback complete: %s",
+      final_success_ ? "SUCCESS" : "FAILURE");
+
+    return final_success_ ?
+      BT::NodeStatus::SUCCESS :
+      BT::NodeStatus::FAILURE;
+  }
+
+  return BT::NodeStatus::RUNNING;
+}
+
+void ExecuteExternalRescueModule::onHalted()
+{
+  publishEnable(false);
+  ctx_->setHoldCurrentPosition();
+  ctx_->startOffboardSetpointStream(20.0, "hold_current_pose");
+
+  RCLCPP_WARN(
+    ctx_->node()->get_logger(),
+    "External rescue halted; BT hold restored.");
+}
 
 }  // namespace krac_control::bt

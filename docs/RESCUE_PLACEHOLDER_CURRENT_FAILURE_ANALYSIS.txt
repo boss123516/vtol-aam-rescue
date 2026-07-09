@@ -1,0 +1,131 @@
+현재 실행 로그 분석
+===================
+
+1. BT는 구조물 상공까지 정상 진행했습니다.
+
+- FlyToLocalPoint SUCCESS
+- 실제 위치 약 (-25.95, -31.49, 3.44 m)
+- WaitForHoverStable SUCCESS
+- ExecuteExternalRescueModule RUNNING
+
+따라서 구조 좌표 이동 노드나 hover 노드에서 막힌 것이 아닙니다.
+
+
+2. 하강이 시작되지 않은 위치
+
+BT는 ExecuteExternalRescueModule에서 외부 노드의 ready=true를 기다렸습니다.
+
+실제 시간:
+
+- 1783599203.014: ExecuteExternalRescueModule RUNNING
+- 1783599218.112: FAILURE:ready_timeout
+- 1783599219.212: ExecuteExternalRescueModule FAILURE
+- 1783599219.213: GlobalMissionRecovery 시작
+
+즉 AUTO.LAND까지 도달하지 못했습니다.
+
+
+3. ready=true가 안 나온 직접 원인
+
+Rescue_placeholder.log에 다음 경고가 있습니다.
+
+- /mavros/local_position/pose QoS incompatible
+- /mavros/local_position/velocity_local QoS incompatible
+- /mavros/global_position/rel_alt QoS incompatible
+- No messages will be received
+- Last incompatible policy: RELIABILITY
+
+현재 실행된 placeholder는 구버전입니다.
+
+로그 첫 줄:
+
+Temporary rescue placeholder ready:
+land -> confirm -> wait 5 s -> SUCCESS
+
+이 구버전은 기본 RELIABLE QoS로 MAVROS telemetry를 구독했습니다.
+MAVROS publisher는 sensor-data/BEST_EFFORT QoS이므로 서로 연결되지 않았습니다.
+
+결과:
+
+- pose 없음
+- hold setpoint 생성 불가
+- pre-stream 불가
+- ready=true 미발행
+- AUTO.LAND 요청 0회
+- 15초 후 BT ready timeout
+
+
+4. 독립 노드로 빼기 전 정상 하강과의 차이
+
+이전에는 BT 안의 PrecisionLandOnTarget이 같은 krac_bt_runner 프로세스의
+MissionContext와 precision_lander를 직접 사용했습니다.
+
+이전 흐름:
+
+WaitForPrecisionTarget
+-> PrecisionLandOnTarget
+-> precision_lander enable
+-> /precision_lander/cmd_vel
+-> MissionContext가 MAVROS setpoint로 전달
+-> 약 3.4 m에서 0.1 m까지 실제 하강
+
+현재 흐름:
+
+ExecuteExternalRescueModule
+-> enable=true
+-> 별도 Python 노드가 MAVROS pose를 직접 구독
+-> 자기 setpoint stream 생성
+-> ready=true
+-> AUTO.LAND
+
+현재는 별도 Python 노드의 MAVROS 구독이 QoS에서 막혔기 때문에
+하강 명령 자체가 한 번도 발생하지 않았습니다.
+
+
+5. 왜 GlobalMissionRecovery로 갔는가
+
+ready timeout
+-> ExecuteExternalRescueModule FAILURE
+-> RescuePlaceholderCycle FAILURE
+-> RescuePickupModule FAILURE
+-> MissionSequenceSplit FAILURE
+-> GlobalMissionRecovery
+
+정상 return mission으로 넘어간 것이 아닙니다.
+구조 단계 실패로 전역 복구 hold에 들어간 것입니다.
+
+
+6. 수정 내용
+
+- MAVROS telemetry 구독을 qos_profile_sensor_data로 변경
+- 위치 setpoint를 20 Hz로 pre-stream한 뒤 ready=true
+- AUTO.LAND 실행
+- 착륙 확인 및 disarm
+- 지상에서 5초 대기
+- OFFBOARD setpoint 다시 pre-stream
+- OFFBOARD 재진입
+- arm
+- 원래 인계 고도까지 상승
+- 안정 hover 확인 후에만 result=SUCCESS
+- BT가 enable=false를 보낼 때까지 hold 유지
+- handover timeout을 15초에서 30초로 증가
+- package build/install 폴더를 지우고 clean rebuild
+- source와 runtime placeholder SHA가 동일한지 검증
+
+
+7. 수정 후 정상 로그
+
+Rescue placeholder v2 ready
+enable=true
+ready=true
+Requested mode=AUTO.LAND
+Landing confirmed
+Waiting 5.0 seconds
+Ground wait complete
+Requested mode=OFFBOARD
+Requested arm=true
+OFFBOARD and armed
+Climb and hover confirmed
+result=SUCCESS
+External rescue handback complete: SUCCESS
+UploadReturnLeg

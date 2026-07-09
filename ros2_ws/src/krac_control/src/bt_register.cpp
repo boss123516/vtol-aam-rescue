@@ -37,6 +37,7 @@ void registerKracBtNodes(BT::BehaviorTreeFactory& factory, const std::shared_ptr
   factory.registerNodeType<IsObjectDetected>("IsObjectDetected");
 
   factory.registerNodeType<StartOffboardSetpointStream>("StartOffboardSetpointStream");
+  factory.registerNodeType<ExecuteExternalRescueModule>("ExecuteExternalRescueModule");
   factory.registerNodeType<SetFlightMode>("SetFlightMode");
   factory.registerNodeType<ArmVehicle>("ArmVehicle");
   factory.registerNodeType<CommandVTOLTransition>("CommandVTOLTransition");

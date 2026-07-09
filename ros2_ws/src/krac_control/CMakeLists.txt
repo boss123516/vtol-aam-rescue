@@ -116,6 +116,7 @@ install(DIRECTORY
 )
 
 install(PROGRAMS
+  src/rescue_controller_placeholder.py
   src/mission_loader.py
   src/gripper_test.py
   DESTINATION lib/${PROJECT_NAME}
