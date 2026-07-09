@@ -206,23 +206,39 @@ BT::NodeStatus PrecisionLandOnTarget::onStart()
 }
 BT::NodeStatus PrecisionLandOnTarget::onRunning()
 {
-  if (ctx_->landedState() == MAV_LANDED_STATE_ON_GROUND) {
+  const double altitude_m = ctx_->relativeAltitude();
+  const double vertical_speed_mps = std::abs(ctx_->verticalSpeed());
+  const double horizontal_speed_mps = ctx_->horizontalSpeed();
+  const bool px4_on_ground =
+    ctx_->landedState() == MAV_LANDED_STATE_ON_GROUND;
+  const bool low_and_stable =
+    altitude_m <= target_altitude_m_ &&
+    vertical_speed_mps <= 0.15 &&
+    horizontal_speed_mps <= 0.30;
+
+  if (px4_on_ground || (!require_landed_state_ && low_and_stable)) {
+    // Seamless controller hand-over:
+    // stop precision descent, capture touchdown position, and immediately
+    // start a continuous hold stream before this BT node returns SUCCESS.
     ctx_->setPrecisionLanderEnabled(false);
-    RCLCPP_INFO(ctx_->node()->get_logger(),
-      "PrecisionLandOnTarget: PX4 reports ON_GROUND; landing committed.");
+    ctx_->setHoldCurrentPosition();
+    ctx_->startOffboardSetpointStream(20.0, "hold_current_pose");
+
+    RCLCPP_INFO(
+      ctx_->node()->get_logger(),
+      "PrecisionLandOnTarget touchdown ready: px4_on_ground=%d "
+      "alt=%.3fm vz=%.3fm/s vxy=%.3fm/s; continuous grip hold started.",
+      px4_on_ground, altitude_m, vertical_speed_mps, horizontal_speed_mps);
     return BT::NodeStatus::SUCCESS;
   }
 
-  if (!require_landed_state_ && ctx_->relativeAltitude() <= target_altitude_m_) {
-    ctx_->setPrecisionLanderEnabled(false);
-    return BT::NodeStatus::SUCCESS;
-  }
-
-  if (require_landed_state_ && ctx_->relativeAltitude() <= target_altitude_m_) {
+  if (altitude_m <= target_altitude_m_) {
     RCLCPP_INFO_THROTTLE(
-      ctx_->node()->get_logger(), *ctx_->node()->get_clock(), 1000,
-      "PrecisionLandOnTarget: low altitude %.2fm; waiting for PX4 ON_GROUND.",
-      ctx_->relativeAltitude());
+      ctx_->node()->get_logger(), *ctx_->node()->get_clock(), 500,
+      "PrecisionLandOnTarget near touchdown but not stable yet: "
+      "alt=%.3fm vz=%.3fm/s vxy=%.3fm/s require_px4=%d landed_state=%d",
+      altitude_m, vertical_speed_mps, horizontal_speed_mps,
+      require_landed_state_, ctx_->landedState());
   }
   if (!ctx_->targetErrorFresh(target_fresh_max_age_sec_)) {
     // 실측 확인: 구조 박스에 근접(대략 2m 이하)하면 정렬이 거의 완벽해도

@@ -107,12 +107,12 @@
                   <WaitForPrecisionTarget max_age_sec="1.0" timeout_sec="30.0"/>
 
                 <!-- AlignToBasket bypassed: WaitForPrecisionTarget hands directly to precision landing. -->
-                  <PrecisionLandOnTarget target_altitude_m="0.10" timeout_sec="120.0"
+                  <PrecisionLandOnTarget target_altitude_m="0.15" timeout_sec="120.0"
                     target_fresh_max_age_sec="3.0" close_range_lock_alt_m="3.0"
                     require_landed_state="false"/>
                   <!-- SITL touchdown decision: altitude threshold is enough. -->
-                  <Delay delay_msec="300"><AlwaysSuccess/></Delay>
-                  <CloseGripper left_topic="/model/standard_vtol_0/servo_5" right_topic="/model/standard_vtol_0/servo_6" attach_topic="/survivor_tray_rep/attach" left_position="0.5" right_position="0.5" settle_sec="3.0" publish_rate_hz="20.0" timeout_sec="7.0"/>
+                  <Delay delay_msec="150"><AlwaysSuccess/></Delay>
+                  <CloseGripper left_topic="/model/standard_vtol_0/servo_5" right_topic="/model/standard_vtol_0/servo_6" attach_topic="/survivor_tray_rep/attach" left_position="0.5" right_position="0.5" settle_sec="0.8" publish_rate_hz="20.0" timeout_sec="7.0"/>
                   <ArmVehicle arm="true" timeout_sec="8.0"/>
                   <IsVehicleArmed/>
                   <StartOffboardSetpointStream mode="hold_current_pose" rate_hz="20"/>
