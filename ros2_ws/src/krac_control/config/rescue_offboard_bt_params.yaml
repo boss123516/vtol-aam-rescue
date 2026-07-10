@@ -4,7 +4,7 @@ krac24_offboard_bt_adapter:
     ready_topic: "/krac/rescue_module/ready"
     result_topic: "/krac/rescue_module/result"
 
-    vision_error_topic: "/camera/target_error"
+    vision_error_topic: "/vision/target_error"
     target_label_topic: "/camera/set_target"
     velocity_topic: "/mavros/setpoint_velocity/cmd_vel_unstamped"
     target_label: "basket"
@@ -19,15 +19,21 @@ krac24_offboard_bt_adapter:
     descend_speed_mps: -0.3
     search_speed_mps: 0.2
     search_altitude_m: 3.0
-    minimum_hover_altitude_m: 1.5
+    # 1.5 m 근접에서는 YOLO가 트레이를 자주 놓쳐 센터링 유지가 불안정했다.
+    # 2.0 m에서 정지하면 타겟이 안정적으로 시야에 남아 파지(상승) 트리거가
+    # 확실히 발화한다. 실제 그립 고도 튜닝은 제어팀 몫.
+    minimum_hover_altitude_m: 2.0
     hover_step_m: 1.0
-    center_tolerance_px: 30.0
-    descent_hold_error_px: 100.0
+    # 저고도(1.5 m) 근접 시 픽셀 오차가 커지므로 60 px로 완화해 안정적으로
+    # 센터링 판정 → 상승(파지) 트리거가 실제로 발화하게 한다.
+    center_tolerance_px: 60.0
+    descent_hold_error_px: 120.0
 
-    # 3 s permits a full unattended SITL test after centering.
+    # 2 s 연속 센터링이면 파지 완료로 보고 상승. 타겟을 놓치기 전에 상승하도록
+    # 3.0 → 2.0으로 단축.
     # Set to -1.0 to require:
     # ros2 service call /cmd/mission_proceed std_srvs/srv/Trigger "{}"
-    auto_proceed_after_hover_sec: 3.0
+    auto_proceed_after_hover_sec: 2.0
 
     ascend_speed_mps: 0.5
     ascend_target_altitude_m: 5.0

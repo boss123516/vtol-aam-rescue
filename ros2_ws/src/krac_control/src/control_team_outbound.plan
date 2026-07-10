@@ -16,7 +16,7 @@
         "AMSLAltAboveTerrain": 10,
         "Altitude": 10,
         "AltitudeMode": 1,
-        "autoContinue": true,
+        "autoContinue": false,
         "command": 84,
         "doJumpId": 1,
         "frame": 3,

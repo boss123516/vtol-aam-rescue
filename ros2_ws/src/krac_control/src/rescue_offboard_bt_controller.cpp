@@ -13,6 +13,7 @@
 #include <std_msgs/msg/bool.hpp>
 #include <std_msgs/msg/string.hpp>
 #include <std_srvs/srv/trigger.hpp>
+#include <krac_interfaces/msg/target_error.hpp>
 
 using namespace std::chrono_literals;
 
@@ -47,7 +48,8 @@ public:
     declare_parameter<std::string>("enable_topic", "/krac/rescue_module/enable");
     declare_parameter<std::string>("ready_topic", "/krac/rescue_module/ready");
     declare_parameter<std::string>("result_topic", "/krac/rescue_module/result");
-    declare_parameter<std::string>("vision_error_topic", "/camera/target_error");
+    // vision_tracker(OBB)가 발행하는 basket 추적 결과 토픽. split 정본과 동일.
+    declare_parameter<std::string>("vision_error_topic", "/vision/target_error");
     declare_parameter<std::string>("target_label_topic", "/camera/set_target");
     declare_parameter<std::string>(
       "velocity_topic", "/mavros/setpoint_velocity/cmd_vel_unstamped");
@@ -66,6 +68,7 @@ public:
     declare_parameter<double>("center_tolerance_px", 30.0);
     declare_parameter<double>("descent_hold_error_px", 100.0);
     declare_parameter<double>("auto_proceed_after_hover_sec", 3.0);
+    declare_parameter<double>("lost_recover_sec", 6.0);
     declare_parameter<double>("ascend_speed_mps", 0.5);
     declare_parameter<double>("ascend_target_altitude_m", 5.0);
     declare_parameter<double>("ascend_stable_sec", 1.0);
@@ -101,6 +104,7 @@ public:
                get_parameter("descent_hold_error_px").as_double());
     auto_proceed_after_hover_sec_ =
       get_parameter("auto_proceed_after_hover_sec").as_double();
+    lost_recover_sec_ = std::max(1.0, get_parameter("lost_recover_sec").as_double());
     ascend_speed_mps_ = get_parameter("ascend_speed_mps").as_double();
     ascend_target_altitude_m_ =
       get_parameter("ascend_target_altitude_m").as_double();
@@ -130,7 +134,7 @@ public:
     velocity_sub_ = create_subscription<geometry_msgs::msg::TwistStamped>(
       "/mavros/local_position/velocity_local", sensor_qos,
       std::bind(&Krac24OffboardBtAdapter::velocityCallback, this, std::placeholders::_1));
-    vision_sub_ = create_subscription<geometry_msgs::msg::Point>(
+    vision_sub_ = create_subscription<krac_interfaces::msg::TargetError>(
       vision_error_topic_, 10,
       std::bind(&Krac24OffboardBtAdapter::visionCallback, this, std::placeholders::_1));
 
@@ -224,6 +228,7 @@ private:
     result_sent_ = false;
     manual_proceed_ = false;
     search_step_ = 0;
+    grab_committed_ = false;
     target_hover_altitude_m_ =
       pose_received_ ? current_pose_.pose.position.z : search_altitude_m_;
     request_started_ = now();
@@ -273,10 +278,15 @@ private:
     vertical_speed_mps_ = msg->twist.linear.z;
   }
 
-  void visionCallback(const geometry_msgs::msg::Point::SharedPtr msg)
+  void visionCallback(const krac_interfaces::msg::TargetError::SharedPtr msg)
   {
-    vision_error_ = *msg;
-    if (msg->z > 0.5) {
+    // TargetError(is_detected, pixel_err_x, pixel_err_y, yaw_err_rad)를 기존
+    // offboard.cpp가 쓰던 Point(dx, dy) 규약으로 매핑한다. 탐지될 때만 신선도
+    // 타임스탬프를 갱신해 objectDetected()가 유효하게 동작한다.
+    vision_error_.x = msg->pixel_err_x;
+    vision_error_.y = msg->pixel_err_y;
+    vision_error_.z = msg->is_detected ? 1.0 : 0.0;
+    if (msg->is_detected) {
       last_vision_time_ = now();
     }
   }
@@ -387,7 +397,7 @@ private:
 
     // Preserved signs from krac24/offboard.cpp.
     command.linear.x = clampVelocity(-vision_error_.y * vision_p_gain_);
-    command.linear.y = clampVelocity(vision_error_.x * vision_p_gain_);
+    command.linear.y = clampVelocity(-vision_error_.x * vision_p_gain_);
 
     if (current_altitude < target_altitude - 0.1) {
       target_altitude = current_altitude;
@@ -473,44 +483,49 @@ private:
         }
         break;
 
-      case Phase::VISION_ALIGN_RESCUE:
-        if (!objectDetected()) {
-          RCLCPP_WARN(get_logger(), "Lost object. Returning to search.");
-          search_step_ = 0;
-          setPhase(Phase::SEARCH_RESCUE);
-          break;
+      case Phase::VISION_ALIGN_RESCUE: {
+        // 근접 시 YOLO 탐지가 간헐적이므로, 놓칠 때마다 SEARCH로 빠져 수평
+        // 탐색 패턴으로 표류하면 타겟에서 멀어져 악순환에 빠진다. 따라서:
+        //  - 짧은 상실: 제자리(수평 0) 홀드하며 재탐지를 기다린다.
+        //  - 오래 상실(그리고 아직 파지 고도 위): SEARCH로 복귀.
+        //  - 감지 + 대략 중심: 하강. 파지 고도 도달 후에는 dwell만으로 상승
+        //    (간헐 탐지를 허용) → 플레이스홀더 파지 성공.
+        const bool detected = objectDetected();
+        const double alt = current_pose_.pose.position.z;
+        const double pixel_distance =
+          std::hypot(vision_error_.x, vision_error_.y);
+
+        // 파지 고도에 타겟을 감지한 채로 한 번 도달하면 파지를 확정(latch)한다.
+        // 이후에는 고도 노이즈나 간헐적 탐지 상실로 dwell 타이머가 리셋되지
+        // 않으므로, 반드시 dwell 시간을 채우고 상승(파지 성공)으로 넘어간다.
+        if (!grab_committed_ && detected &&
+            alt < minimum_hover_altitude_m_ + 0.3)
+        {
+          grab_committed_ = true;
+          centered_started_ = now();
+          RCLCPP_INFO(
+            get_logger(),
+            "Reached grab altitude (%.2f m). Committing to pickup dwell.", alt);
         }
 
-        if (
-          current_pose_.pose.position.z < minimum_hover_altitude_m_ + 0.1 &&
-          target_hover_altitude_m_ <= minimum_hover_altitude_m_)
-        {
-          const double pixel_distance =
-            std::hypot(vision_error_.x, vision_error_.y);
-          command.linear.x =
-            clampVelocity(-vision_error_.y * vision_p_gain_);
-          command.linear.y =
-            clampVelocity(vision_error_.x * vision_p_gain_);
-
-          if (pixel_distance < center_tolerance_px_) {
-            if (centered_started_.nanoseconds() == 0) {
-              centered_started_ = now();
-            }
-          } else {
-            centered_started_ =
-              rclcpp::Time(0, 0, get_clock()->get_clock_type());
+        if (grab_committed_) {
+          // 파지 확정: 제자리 유지(수직 0), 감지되면 수평 미세 정렬만.
+          if (detected) {
+            command.linear.x = clampVelocity(-vision_error_.y * vision_p_gain_);
+            command.linear.y = clampVelocity(-vision_error_.x * vision_p_gain_);
           }
+          command.linear.z = 0.0;
 
           const bool automatic_proceed =
             auto_proceed_after_hover_sec_ >= 0.0 &&
-            centered_started_.nanoseconds() > 0 &&
             elapsed(centered_started_) >= auto_proceed_after_hover_sec_;
 
           RCLCPP_INFO_THROTTLE(
             get_logger(), *get_clock(), 2000,
-            "Hovering over target. error=%.1f px. "
+            "Grab dwell at %.2f m. error=%.1f px detected=%s dwell=%.1fs "
             "manual=%s auto=%s",
-            pixel_distance,
+            alt, pixel_distance, detected ? "true" : "false",
+            elapsed(centered_started_),
             manual_proceed_ ? "true" : "false",
             automatic_proceed ? "true" : "false");
 
@@ -518,10 +533,28 @@ private:
             manual_proceed_ = false;
             setPhase(Phase::ASCEND_WITH_VICTIM);
           }
+        } else if (!detected) {
+          // 접근 중 상실: 오래 상실이면 SEARCH, 아니면 제자리 홀드.
+          if (elapsed(last_vision_time_) > lost_recover_sec_) {
+            RCLCPP_WARN(
+              get_logger(),
+              "Target unseen for %.1fs before grab. Returning to search.",
+              lost_recover_sec_);
+            search_step_ = 0;
+            setPhase(Phase::SEARCH_RESCUE);
+            break;
+          }
+          command.linear.x = 0.0;
+          command.linear.y = 0.0;
         } else {
-          executeStepDescent(command, target_hover_altitude_m_);
+          // 접근/하강: 검증된 매핑으로 정렬하며, 어느 정도 중심일 때만 하강.
+          command.linear.x = clampVelocity(-vision_error_.y * vision_p_gain_);
+          command.linear.y = clampVelocity(-vision_error_.x * vision_p_gain_);
+          command.linear.z =
+            (pixel_distance < descent_hold_error_px_) ? descend_speed_mps_ : 0.0;
         }
         break;
+      }
 
       case Phase::ASCEND_WITH_VICTIM:
         command.linear.z = ascend_speed_mps_;
@@ -593,6 +626,7 @@ private:
   double center_tolerance_px_{30.0};
   double descent_hold_error_px_{100.0};
   double auto_proceed_after_hover_sec_{3.0};
+  double lost_recover_sec_{6.0};
   double ascend_speed_mps_{0.5};
   double ascend_target_altitude_m_{5.0};
   double ascend_stable_sec_{1.0};
@@ -607,6 +641,7 @@ private:
   bool manual_proceed_{false};
   bool state_received_{false};
   bool pose_received_{false};
+  bool grab_committed_{false};
 
   int search_step_{0};
   double target_hover_altitude_m_{3.0};
@@ -633,7 +668,7 @@ private:
   rclcpp::Subscription<mavros_msgs::msg::State>::SharedPtr state_sub_;
   rclcpp::Subscription<geometry_msgs::msg::PoseStamped>::SharedPtr pose_sub_;
   rclcpp::Subscription<geometry_msgs::msg::TwistStamped>::SharedPtr velocity_sub_;
-  rclcpp::Subscription<geometry_msgs::msg::Point>::SharedPtr vision_sub_;
+  rclcpp::Subscription<krac_interfaces::msg::TargetError>::SharedPtr vision_sub_;
 
   rclcpp::Publisher<geometry_msgs::msg::Twist>::SharedPtr velocity_pub_;
   rclcpp::Publisher<std_msgs::msg::String>::SharedPtr target_label_pub_;

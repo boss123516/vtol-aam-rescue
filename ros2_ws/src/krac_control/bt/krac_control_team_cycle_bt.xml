@@ -44,7 +44,11 @@
             <Delay delay_msec="300"><AlwaysSuccess/></Delay>
             <IsFlightMode mode="AUTO.MISSION"/>
             <IsVehicleArmed/>
-            <WaitForWaypointReached seq="1" match="after_start" timeout_sec="240.0"/>
+            <!-- WP0(VTOL_TAKEOFF) 도달 후 기체는 autoContinue=false로 HOME 상공에서
+                 MC 홀드한다. 전방 AUTO.MISSION 웨이포인트로 가지 않으므로 FW 전환/
+                 quad-chute가 발생하지 않는다. 여기서 BT가 OFFBOARD로 인수해 MC로
+                 구조지점(REP)까지 직행한다. -->
+            <WaitForWaypointReached seq="0" match="after_start" timeout_sec="240.0"/>
             <Sequence name="TakeOverAtRescueSite">
               <StartOffboardSetpointStream mode="hold_current_pose" rate_hz="20"/>
               <Delay delay_msec="1500"><AlwaysSuccess/></Delay>
@@ -55,22 +59,28 @@
               <ClearMissionPlan optional="true"/>
             </Sequence>
             <SubTree ID="RescuePickupModule"/>
-            <RetryUntilSuccessful num_attempts="2">
-              <Sequence name="UploadControlTeamReturn">
-                <ClearMissionPlan optional="true"/>
-                <UploadMissionPlan plan_path="control_team_return.plan" mission_name="control_team_return" expected_end="HOME_LAND"/>
-                <IsMissionUploaded mission_name="control_team_return" expected_end="HOME_LAND"/>
-              </Sequence>
-            </RetryUntilSuccessful>
-            <RetryUntilSuccessful num_attempts="3">
-              <SetFlightMode mode="AUTO.MISSION" timeout_sec="8.0"/>
-            </RetryUntilSuccessful>
-            <WaitForWaypointReached seq="1" match="after_start" timeout_sec="300.0"/>
-            <DetectLanding max_relative_altitude_m="0.4" max_vertical_speed_mps="0.3" timeout_sec="180.0"/>
-            <Fallback name="FinalDisarmOrAlreadyDisarmed">
-              <Inverter><IsVehicleArmed/></Inverter>
-              <ArmVehicle arm="false" timeout_sec="10.0"/>
-            </Fallback>
+            <!-- 구조 완료 후: 쿼드(MC) OFFBOARD로 HOME(0,0) 직행 복귀 후 최종 착륙.
+                 AUTO.MISSION return.plan을 쓰지 않고 BT가 직접 위치 setpoint로 복귀한다. -->
+            <Sequence name="ControlTeamReturnMcDirect">
+              <ClearMissionPlan optional="true"/>
+              <StartOffboardSetpointStream mode="hold_current_pose" rate_hz="20"/>
+              <Delay delay_msec="1500"><AlwaysSuccess/></Delay>
+              <IsOffboardSetpointStreamAlive min_rate_hz="10" stable_duration_sec="1.0"/>
+              <RetryUntilSuccessful num_attempts="3">
+                <SetFlightMode mode="OFFBOARD" timeout_sec="8.0"/>
+              </RetryUntilSuccessful>
+              <CommandVTOLTransition target_state="MC" timeout_sec="20.0"/>
+              <FlyToLocalPoint x_m="0.0" y_m="0.0" z_m="10.0" xy_tolerance_m="1.0" z_tolerance_m="0.6" max_xy_speed_mps="3.0" max_z_speed_mps="1.0" timeout_sec="120.0"/>
+              <WaitForHoverStable altitude_tolerance_m="1.0" max_vertical_speed_mps="0.4" max_horizontal_speed_mps="0.6" stable_duration_sec="1.0" timeout_sec="20.0"/>
+              <RetryUntilSuccessful num_attempts="3">
+                <SetFlightMode mode="AUTO.LAND" timeout_sec="8.0"/>
+              </RetryUntilSuccessful>
+              <DetectLanding max_relative_altitude_m="0.4" max_vertical_speed_mps="0.3" timeout_sec="180.0"/>
+              <Fallback name="FinalDisarmOrAlreadyDisarmed">
+                <Inverter><IsVehicleArmed/></Inverter>
+                <ArmVehicle arm="false" timeout_sec="10.0"/>
+              </Fallback>
+            </Sequence>
           </Sequence>
         </ReactiveSequence>
         <GlobalMissionRecovery reason="control_team_short_cycle_failure"/>

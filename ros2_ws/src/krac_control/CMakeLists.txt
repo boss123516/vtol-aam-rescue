@@ -74,6 +74,7 @@ ament_target_dependencies(rescue_offboard_bt_controller
   geometry_msgs
   std_msgs
   std_srvs
+  krac_interfaces
 )
 
 add_executable(krac_bt_mock_runner src/krac_bt_mock_runner.cpp)

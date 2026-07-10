@@ -30,6 +30,15 @@ param set-default SIM_GZ_EN 1
 param set-default SENS_EN_ARSPDSIM 0
 param set-default MIS_TKO_LAND_REQ 1
 
+# ---------------------------------------------------------------------------
+# SITL 배터리: 이 무거운 amsr_vtol은 기본 SITL 배터리를 매우 빠르게 소모해
+# outbound 호버 중에도 battery-critical RTL 페일세이프가 걸린다(실제 하드웨어
+# 문제가 아니라 시뮬 배터리 모델 문제). 시뮬 배터리를 거의 만충으로 유지하고
+# 저전압 액션을 꺼서 전체 미션(구조+복귀)이 완주되게 한다.
+# ---------------------------------------------------------------------------
+param set-default SIM_BAT_MIN_PCT 90.0
+param set-default COM_LOW_BAT_ACT 0
+
 # Failure Detector
 param set-default FD_ACT_EN 0
 param set-default FD_ACT_MOT_TOUT 500
@@ -43,31 +52,46 @@ param set-default COM_PREARM_MODE 2     #
 # -------------------------------------------------------------------------
 param set-default CA_ROTOR_COUNT 5
 
-# Rotor 0 (Motor 1): Front Right - CCW (표준 일치)
-param set-default CA_ROTOR0_PX 0.3418   # (0.4305 - 0.0887) = +0.3418 (앞)
-param set-default CA_ROTOR0_PY 0.502    # Y > 0 (오른쪽)
-param set-default CA_ROTOR0_KM 0.05     # CCW
+# ---------------------------------------------------------------------------
+# CA_ROTOR geometry는 cjfgus814123/amsr-vtol-dev 의 models/amsr_vtol/model.sdf
+# 실제 로터 링크 좌표에서 유도한다. gz 모델 프레임(x-fwd, y-LEFT, z-UP)을 PX4
+# 바디 프레임 FRD(x-fwd, y-RIGHT, z-DOWN)로 변환: PX=+x_rel, PY=-y_rel, PZ=-z_rel.
+# CoG는 base_link 원점(-0.3363, 0, 0.0584) 기준(base_link 질량 6.97kg 지배적).
+# 회전방향: rotor_0/1 = ccw(+KM), rotor_2/3 = cw(-KM)  (모델 plugin과 일치).
+#   rotor_0 gz(-0.0119, +0.502, 0.0964) : Front-Left,  ccw
+#   rotor_1 gz(-0.6608, -0.502, 0.0231) : Rear-Right,  ccw
+#   rotor_2 gz(-0.0119, -0.502, 0.0964) : Front-Right, cw
+#   rotor_3 gz(-0.6608, +0.502,-0.0231) : Rear-Left,   cw
+#   rotor_puller gz(-0.714, 0, 0.0564)  : Pusher
+# ---------------------------------------------------------------------------
 
-# Rotor 1 (Motor 2): Rear Left - CCW (수정됨: 위치 및 순서 교정)
-# [오류 원인] 기존에는 이것을 우측 후방으로 잡았음 -> 좌측 후방(-Y)으로 수정
-param set-default CA_ROTOR1_PX -0.3295  # (0.4305 - 0.760) = -0.3295 (뒤)
-param set-default CA_ROTOR1_PY -0.502   # Y < 0 (왼쪽)
-param set-default CA_ROTOR1_KM 0.05     # CCW (대각선 Motor 1과 동일)
+# Rotor 0 (Motor 1): Front-Left - CCW
+param set-default CA_ROTOR0_PX 0.3244
+param set-default CA_ROTOR0_PY -0.502
+param set-default CA_ROTOR0_PZ -0.038
+param set-default CA_ROTOR0_KM 0.05
 
-# Rotor 2 (Motor 3): Front Left - CW (표준 일치)
-param set-default CA_ROTOR2_PX 0.3418   # (0.4305 - 0.0887) = +0.3418 (앞)
-param set-default CA_ROTOR2_PY -0.502   # Y < 0 (왼쪽)
-param set-default CA_ROTOR2_KM -0.05    # CW
+# Rotor 1 (Motor 2): Rear-Right - CCW
+param set-default CA_ROTOR1_PX -0.3245
+param set-default CA_ROTOR1_PY 0.502
+param set-default CA_ROTOR1_PZ 0.0353
+param set-default CA_ROTOR1_KM 0.05
 
-# Rotor 3 (Motor 4): Rear Right - CW (수정됨: 위치 및 순서 교정)
-# [오류 원인] 기존에는 이것을 좌측 후방으로 잡았음 -> 우측 후방(+Y)으로 수정
-param set-default CA_ROTOR3_PX -0.3295  # (0.4305 - 0.760) = -0.3295 (뒤)
-param set-default CA_ROTOR3_PY 0.502    # Y > 0 (오른쪽)
-param set-default CA_ROTOR3_KM -0.05    # CW (대각선 Motor 3와 동일)
+# Rotor 2 (Motor 3): Front-Right - CW
+param set-default CA_ROTOR2_PX 0.3244
+param set-default CA_ROTOR2_PY 0.502
+param set-default CA_ROTOR2_PZ -0.038
+param set-default CA_ROTOR2_KM -0.05
+
+# Rotor 3 (Motor 4): Rear-Left - CW
+param set-default CA_ROTOR3_PX -0.3245
+param set-default CA_ROTOR3_PY -0.502
+param set-default CA_ROTOR3_PZ 0.0815
+param set-default CA_ROTOR3_KM -0.05
 
 # Rotor 4 (Motor 5): Pusher Prop - Forward Thrust
-param set-default CA_ROTOR4_PX -0.1835  # (0.4305 - 0.614) = -0.1835 (뒤)
-param set-default CA_ROTOR4_PZ 0.0322  # (0.0572 - 0.025) = 0.0322 (아래)
+param set-default CA_ROTOR4_PX -0.3777
+param set-default CA_ROTOR4_PZ -0.002
 param set-default CA_ROTOR4_AX 1.0
 param set-default CA_ROTOR4_AY 0.0
 param set-default CA_ROTOR4_AZ 0.0
