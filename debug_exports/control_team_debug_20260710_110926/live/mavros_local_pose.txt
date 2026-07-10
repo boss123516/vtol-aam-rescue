@@ -1,0 +1,4 @@
+$ ros2 topic echo /mavros/local_position/pose --once
+
+WARNING: topic [/mavros/local_position/pose] does not appear to be published yet
+Could not determine the type for the passed topic

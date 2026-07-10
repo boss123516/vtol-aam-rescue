@@ -1,0 +1,1023 @@
+BT debug summary
+repo: /home/mudokim/workspace/hzy/krac-control-team-complete
+run_log_dir: /tmp/krac_ros_logs/control_team_20260710_110247
+generated_at: 2026-07-10 11:04:33 KST
+
+===== Files =====
+2026-07-10 11:02 /tmp/krac_ros_logs/control_team_20260710_110247/apply_px4_assets.log
+2026-07-10 11:02 /tmp/krac_ros_logs/control_team_20260710_110247/ros_logs/python3_46586_1783648968852.log
+2026-07-10 11:02 /tmp/krac_ros_logs/control_team_20260710_110247/ros_logs/python3_46654_1783648969029.log
+2026-07-10 11:02 /tmp/krac_ros_logs/control_team_20260710_110247/ros_logs/python3_46812_1783648969223.log
+2026-07-10 11:02 /tmp/krac_ros_logs/control_team_20260710_110247/ros_logs/python3_47017_1783648970995.log
+2026-07-10 11:02 /tmp/krac_ros_logs/control_team_20260710_110247/ros_logs/python3_47299_1783648973739.log
+2026-07-10 11:02 /tmp/krac_ros_logs/control_team_20260710_110247/ros_logs/python3_47472_1783648975758.log
+2026-07-10 11:02 /tmp/krac_ros_logs/control_team_20260710_110247/ros_logs/python3_47557_1783648978611.log
+2026-07-10 11:03 /tmp/krac_ros_logs/control_team_20260710_110247/auto_spawn.log
+2026-07-10 11:03 /tmp/krac_ros_logs/control_team_20260710_110247/nav_dll_act_disable.log
+2026-07-10 11:03 /tmp/krac_ros_logs/control_team_20260710_110247/ros_logs/python3_47715_1783648980668.log
+2026-07-10 11:03 /tmp/krac_ros_logs/control_team_20260710_110247/ros_logs/python3_47956_1783648982754.log
+2026-07-10 11:03 /tmp/krac_ros_logs/control_team_20260710_110247/ros_logs/python3_48045_1783648984863.log
+2026-07-10 11:03 /tmp/krac_ros_logs/control_team_20260710_110247/ros_logs/python3_48115_1783648986950.log
+2026-07-10 11:03 /tmp/krac_ros_logs/control_team_20260710_110247/ros_logs/python3_48155_1783648988034.log
+2026-07-10 11:03 /tmp/krac_ros_logs/control_team_20260710_110247/ros_logs/python3_48227_1783648991731.log
+2026-07-10 11:04 /tmp/krac_ros_logs/control_team_20260710_110247/BT_vision_stack.log
+2026-07-10 11:04 /tmp/krac_ros_logs/control_team_20260710_110247/Gazebo_image_republisher.log
+2026-07-10 11:04 /tmp/krac_ros_logs/control_team_20260710_110247/gripper_bridge.log
+2026-07-10 11:04 /tmp/krac_ros_logs/control_team_20260710_110247/krac_bt_runner.launch.log
+2026-07-10 11:04 /tmp/krac_ros_logs/control_team_20260710_110247/rescue_offboard_bt_controller.log
+2026-07-10 11:04 /tmp/krac_ros_logs/control_team_20260710_110247/ros_logs/2026-07-10-11-02-48-843227-mudokim-Legion-5-15AHP10-46578/launch.log
+2026-07-10 11:04 /tmp/krac_ros_logs/control_team_20260710_110247/ros_logs/2026-07-10-11-02-49-122689-mudokim-Legion-5-15AHP10-46692/launch.log
+2026-07-10 11:04 /tmp/krac_ros_logs/control_team_20260710_110247/ros_logs/2026-07-10-11-03-09-483816-mudokim-Legion-5-15AHP10-48189/launch.log
+2026-07-10 11:04 /tmp/krac_ros_logs/control_team_20260710_110247/ros_logs/krac_bt_runner_48190_1783648989535.log
+2026-07-10 11:04 /tmp/krac_ros_logs/control_team_20260710_110247/ros_logs/mavros_node_46674_1783648968900.log
+2026-07-10 11:04 /tmp/krac_ros_logs/control_team_20260710_110247/ros_logs/parameter_bridge_46611_1783648968763.log
+2026-07-10 11:04 /tmp/krac_ros_logs/control_team_20260710_110247/ros_logs/precision_lander_46843_1783648969188.log
+2026-07-10 11:04 /tmp/krac_ros_logs/control_team_20260710_110247/ros_logs/python3_46613_1783648969101.log
+2026-07-10 11:04 /tmp/krac_ros_logs/control_team_20260710_110247/ros_logs/python3_46839_1783648970967.log
+2026-07-10 11:04 /tmp/krac_ros_logs/control_team_20260710_110247/ros_logs/python3_46841_1783648970955.log
+2026-07-10 11:04 /tmp/krac_ros_logs/control_team_20260710_110247/sitl_vtol.launch.log
+2026-07-10 11:04 /tmp/krac_ros_logs/control_team_20260710_110247/summary.txt
+2026-07-10 11:04 /tmp/krac_ros_logs/control_team_20260710_110247/vision_debug_viewer.log
+
+===== High Signal Log Lines =====
+
+===== BT Runner Tail =====
+==> /tmp/krac_ros_logs/control_team_20260710_110247/ros_logs/krac_bt_runner_48190_1783648989535.log <==
+[INFO] [1783648991.318017133] [krac_bt_runner]: BT viewer window enabled (direction=Vertical).
+[INFO] [1783648991.318154691] [krac_bt_runner]: KRAC real BT runner started. XML=/home/mudokim/workspace/hzy/krac-control-team-complete/ros2_ws/src/krac_control/bt/krac_control_team_cycle_bt.xml tick_rate=10.00
+[INFO] [1783648991.318620717] [krac_bt_runner]: Running external mission loader: timeout 30s ros2 run krac_control mission_loader.py --ros-args -p plan_file:=/home/mudokim/workspace/hzy/krac-control-team-complete/ros2_ws/install/krac_control/share/krac_control/mission/control_team_outbound.plan
+[INFO] [1783648993.018499534] [krac_bt_runner]: Requested flight mode: AUTO.MISSION
+[INFO] [1783648994.118531257] [krac_bt_runner]: Requested arm=true
+[WARN] [1783649002.218295565] [krac_bt_runner]: ArmVehicle timed out: requested=true current=false
+[INFO] [1783649002.218488648] [krac_bt_runner]: Requested arm=true
+[WARN] [1783649010.318284895] [krac_bt_runner]: ArmVehicle timed out: requested=true current=false
+[INFO] [1783649010.318469752] [krac_bt_runner]: Requested arm=true
+[WARN] [1783649018.418311913] [krac_bt_runner]: ArmVehicle timed out: requested=true current=false
+[WARN] [1783649018.418392204] [krac_bt_runner]: GlobalMissionRecovery started. policy=hold. Holding instead of finishing the BT.
+[WARN] [1783649018.518266210] [krac_bt_runner]: GlobalMissionRecovery active. policy=hold. Mission is held.
+[WARN] [1783649020.518270389] [krac_bt_runner]: GlobalMissionRecovery active. policy=hold. Mission is held.
+[WARN] [1783649022.518274427] [krac_bt_runner]: GlobalMissionRecovery active. policy=hold. Mission is held.
+[WARN] [1783649024.618271628] [krac_bt_runner]: GlobalMissionRecovery active. policy=hold. Mission is held.
+[WARN] [1783649026.718279642] [krac_bt_runner]: GlobalMissionRecovery active. policy=hold. Mission is held.
+[WARN] [1783649028.718284543] [krac_bt_runner]: GlobalMissionRecovery active. policy=hold. Mission is held.
+[WARN] [1783649030.818264957] [krac_bt_runner]: GlobalMissionRecovery active. policy=hold. Mission is held.
+[WARN] [1783649032.918270990] [krac_bt_runner]: GlobalMissionRecovery active. policy=hold. Mission is held.
+[WARN] [1783649034.918286361] [krac_bt_runner]: GlobalMissionRecovery active. policy=hold. Mission is held.
+[WARN] [1783649037.018271137] [krac_bt_runner]: GlobalMissionRecovery active. policy=hold. Mission is held.
+[WARN] [1783649039.018274305] [krac_bt_runner]: GlobalMissionRecovery active. policy=hold. Mission is held.
+[WARN] [1783649041.118295440] [krac_bt_runner]: GlobalMissionRecovery active. policy=hold. Mission is held.
+[WARN] [1783649043.118325227] [krac_bt_runner]: GlobalMissionRecovery active. policy=hold. Mission is held.
+[WARN] [1783649045.218277745] [krac_bt_runner]: GlobalMissionRecovery active. policy=hold. Mission is held.
+[WARN] [1783649047.318278495] [krac_bt_runner]: GlobalMissionRecovery active. policy=hold. Mission is held.
+[WARN] [1783649049.418264667] [krac_bt_runner]: GlobalMissionRecovery active. policy=hold. Mission is held.
+[WARN] [1783649051.418284284] [krac_bt_runner]: GlobalMissionRecovery active. policy=hold. Mission is held.
+[WARN] [1783649053.518273994] [krac_bt_runner]: GlobalMissionRecovery active. policy=hold. Mission is held.
+[WARN] [1783649055.618258975] [krac_bt_runner]: GlobalMissionRecovery active. policy=hold. Mission is held.
+[WARN] [1783649057.618302945] [krac_bt_runner]: GlobalMissionRecovery active. policy=hold. Mission is held.
+[WARN] [1783649059.718275623] [krac_bt_runner]: GlobalMissionRecovery active. policy=hold. Mission is held.
+[WARN] [1783649061.818264412] [krac_bt_runner]: GlobalMissionRecovery active. policy=hold. Mission is held.
+[WARN] [1783649063.818277993] [krac_bt_runner]: GlobalMissionRecovery active. policy=hold. Mission is held.
+[WARN] [1783649065.918284405] [krac_bt_runner]: GlobalMissionRecovery active. policy=hold. Mission is held.
+[WARN] [1783649068.018293320] [krac_bt_runner]: GlobalMissionRecovery active. policy=hold. Mission is held.
+[WARN] [1783649070.118276669] [krac_bt_runner]: GlobalMissionRecovery active. policy=hold. Mission is held.
+[WARN] [1783649072.218265768] [krac_bt_runner]: GlobalMissionRecovery active. policy=hold. Mission is held.
+[INFO] [1783649073.049190601] [rclcpp]: signal_handler(SIGINT/SIGTERM)
+
+==> /tmp/krac_ros_logs/control_team_20260710_110247/krac_bt_runner.launch.log <==
+[krac_bt_runner-1] [1783649068.918]: EmergencyBranch           [36mIDLE[0m -> [33mRUNNING[0m
+[krac_bt_runner-1] [1783649068.918]: IsEmergencyDetected       [36mIDLE[0m -> [31mFAILURE[0m
+[krac_bt_runner-1] [1783649068.918]: IsEmergencyDetected       [31mFAILURE[0m -> [36mIDLE[0m
+[krac_bt_runner-1] [1783649068.918]: EmergencyBranch           [33mRUNNING[0m -> [31mFAILURE[0m
+[krac_bt_runner-1] [1783649068.918]: EmergencyBranch           [31mFAILURE[0m -> [36mIDLE[0m
+[krac_bt_runner-1] [1783649069.018]: EmergencyBranch           [36mIDLE[0m -> [33mRUNNING[0m
+[krac_bt_runner-1] [1783649069.018]: IsEmergencyDetected       [36mIDLE[0m -> [31mFAILURE[0m
+[krac_bt_runner-1] [1783649069.018]: IsEmergencyDetected       [31mFAILURE[0m -> [36mIDLE[0m
+[krac_bt_runner-1] [1783649069.018]: EmergencyBranch           [33mRUNNING[0m -> [31mFAILURE[0m
+[krac_bt_runner-1] [1783649069.018]: EmergencyBranch           [31mFAILURE[0m -> [36mIDLE[0m
+[krac_bt_runner-1] [1783649069.118]: EmergencyBranch           [36mIDLE[0m -> [33mRUNNING[0m
+[krac_bt_runner-1] [1783649069.118]: IsEmergencyDetected       [36mIDLE[0m -> [31mFAILURE[0m
+[krac_bt_runner-1] [1783649069.118]: IsEmergencyDetected       [31mFAILURE[0m -> [36mIDLE[0m
+[krac_bt_runner-1] [1783649069.118]: EmergencyBranch           [33mRUNNING[0m -> [31mFAILURE[0m
+[krac_bt_runner-1] [1783649069.118]: EmergencyBranch           [31mFAILURE[0m -> [36mIDLE[0m
+[krac_bt_runner-1] [1783649069.218]: EmergencyBranch           [36mIDLE[0m -> [33mRUNNING[0m
+[krac_bt_runner-1] [1783649069.218]: IsEmergencyDetected       [36mIDLE[0m -> [31mFAILURE[0m
+[krac_bt_runner-1] [1783649069.218]: IsEmergencyDetected       [31mFAILURE[0m -> [36mIDLE[0m
+[krac_bt_runner-1] [1783649069.218]: EmergencyBranch           [33mRUNNING[0m -> [31mFAILURE[0m
+[krac_bt_runner-1] [1783649069.218]: EmergencyBranch           [31mFAILURE[0m -> [36mIDLE[0m
+[krac_bt_runner-1] [1783649069.318]: EmergencyBranch           [36mIDLE[0m -> [33mRUNNING[0m
+[krac_bt_runner-1] [1783649069.318]: IsEmergencyDetected       [36mIDLE[0m -> [31mFAILURE[0m
+[krac_bt_runner-1] [1783649069.318]: IsEmergencyDetected       [31mFAILURE[0m -> [36mIDLE[0m
+[krac_bt_runner-1] [1783649069.318]: EmergencyBranch           [33mRUNNING[0m -> [31mFAILURE[0m
+[krac_bt_runner-1] [1783649069.318]: EmergencyBranch           [31mFAILURE[0m -> [36mIDLE[0m
+[krac_bt_runner-1] [1783649069.418]: EmergencyBranch           [36mIDLE[0m -> [33mRUNNING[0m
+[krac_bt_runner-1] [1783649069.418]: IsEmergencyDetected       [36mIDLE[0m -> [31mFAILURE[0m
+[krac_bt_runner-1] [1783649069.418]: IsEmergencyDetected       [31mFAILURE[0m -> [36mIDLE[0m
+[krac_bt_runner-1] [1783649069.418]: EmergencyBranch           [33mRUNNING[0m -> [31mFAILURE[0m
+[krac_bt_runner-1] [1783649069.418]: EmergencyBranch           [31mFAILURE[0m -> [36mIDLE[0m
+[krac_bt_runner-1] [1783649069.518]: EmergencyBranch           [36mIDLE[0m -> [33mRUNNING[0m
+[krac_bt_runner-1] [1783649069.518]: IsEmergencyDetected       [36mIDLE[0m -> [31mFAILURE[0m
+[krac_bt_runner-1] [1783649069.518]: IsEmergencyDetected       [31mFAILURE[0m -> [36mIDLE[0m
+[krac_bt_runner-1] [1783649069.518]: EmergencyBranch           [33mRUNNING[0m -> [31mFAILURE[0m
+[krac_bt_runner-1] [1783649069.518]: EmergencyBranch           [31mFAILURE[0m -> [36mIDLE[0m
+[krac_bt_runner-1] [1783649069.618]: EmergencyBranch           [36mIDLE[0m -> [33mRUNNING[0m
+[krac_bt_runner-1] [1783649069.618]: IsEmergencyDetected       [36mIDLE[0m -> [31mFAILURE[0m
+[krac_bt_runner-1] [1783649069.618]: IsEmergencyDetected       [31mFAILURE[0m -> [36mIDLE[0m
+[krac_bt_runner-1] [1783649069.618]: EmergencyBranch           [33mRUNNING[0m -> [31mFAILURE[0m
+[krac_bt_runner-1] [1783649069.618]: EmergencyBranch           [31mFAILURE[0m -> [36mIDLE[0m
+[krac_bt_runner-1] [1783649069.718]: EmergencyBranch           [36mIDLE[0m -> [33mRUNNING[0m
+[krac_bt_runner-1] [1783649069.718]: IsEmergencyDetected       [36mIDLE[0m -> [31mFAILURE[0m
+[krac_bt_runner-1] [1783649069.718]: IsEmergencyDetected       [31mFAILURE[0m -> [36mIDLE[0m
+[krac_bt_runner-1] [1783649069.718]: EmergencyBranch           [33mRUNNING[0m -> [31mFAILURE[0m
+[krac_bt_runner-1] [1783649069.718]: EmergencyBranch           [31mFAILURE[0m -> [36mIDLE[0m
+[krac_bt_runner-1] [1783649069.818]: EmergencyBranch           [36mIDLE[0m -> [33mRUNNING[0m
+[krac_bt_runner-1] [1783649069.818]: IsEmergencyDetected       [36mIDLE[0m -> [31mFAILURE[0m
+[krac_bt_runner-1] [1783649069.818]: IsEmergencyDetected       [31mFAILURE[0m -> [36mIDLE[0m
+[krac_bt_runner-1] [1783649069.818]: EmergencyBranch           [33mRUNNING[0m -> [31mFAILURE[0m
+[krac_bt_runner-1] [1783649069.818]: EmergencyBranch           [31mFAILURE[0m -> [36mIDLE[0m
+[krac_bt_runner-1] [1783649069.918]: EmergencyBranch           [36mIDLE[0m -> [33mRUNNING[0m
+[krac_bt_runner-1] [1783649069.918]: IsEmergencyDetected       [36mIDLE[0m -> [31mFAILURE[0m
+[krac_bt_runner-1] [1783649069.918]: IsEmergencyDetected       [31mFAILURE[0m -> [36mIDLE[0m
+[krac_bt_runner-1] [1783649069.918]: EmergencyBranch           [33mRUNNING[0m -> [31mFAILURE[0m
+[krac_bt_runner-1] [1783649069.918]: EmergencyBranch           [31mFAILURE[0m -> [36mIDLE[0m
+[krac_bt_runner-1] [1783649070.018]: EmergencyBranch           [36mIDLE[0m -> [33mRUNNING[0m
+[krac_bt_runner-1] [1783649070.018]: IsEmergencyDetected       [36mIDLE[0m -> [31mFAILURE[0m
+[krac_bt_runner-1] [1783649070.018]: IsEmergencyDetected       [31mFAILURE[0m -> [36mIDLE[0m
+[krac_bt_runner-1] [1783649070.018]: EmergencyBranch           [33mRUNNING[0m -> [31mFAILURE[0m
+[krac_bt_runner-1] [1783649070.018]: EmergencyBranch           [31mFAILURE[0m -> [36mIDLE[0m
+[krac_bt_runner-1] [1783649070.118]: EmergencyBranch           [36mIDLE[0m -> [33mRUNNING[0m
+[krac_bt_runner-1] [1783649070.118]: IsEmergencyDetected       [36mIDLE[0m -> [31mFAILURE[0m
+[krac_bt_runner-1] [1783649070.118]: IsEmergencyDetected       [31mFAILURE[0m -> [36mIDLE[0m
+[krac_bt_runner-1] [1783649070.118]: EmergencyBranch           [33mRUNNING[0m -> [31mFAILURE[0m
+[krac_bt_runner-1] [WARN] [1783649070.118276669] [krac_bt_runner]: GlobalMissionRecovery active. policy=hold. Mission is held.
+[krac_bt_runner-1] [1783649070.118]: EmergencyBranch           [31mFAILURE[0m -> [36mIDLE[0m
+[krac_bt_runner-1] [1783649070.218]: EmergencyBranch           [36mIDLE[0m -> [33mRUNNING[0m
+[krac_bt_runner-1] [1783649070.218]: IsEmergencyDetected       [36mIDLE[0m -> [31mFAILURE[0m
+[krac_bt_runner-1] [1783649070.218]: IsEmergencyDetected       [31mFAILURE[0m -> [36mIDLE[0m
+[krac_bt_runner-1] [1783649070.218]: EmergencyBranch           [33mRUNNING[0m -> [31mFAILURE[0m
+[krac_bt_runner-1] [1783649070.218]: EmergencyBranch           [31mFAILURE[0m -> [36mIDLE[0m
+[krac_bt_runner-1] [1783649070.318]: EmergencyBranch           [36mIDLE[0m -> [33mRUNNING[0m
+[krac_bt_runner-1] [1783649070.318]: IsEmergencyDetected       [36mIDLE[0m -> [31mFAILURE[0m
+[krac_bt_runner-1] [1783649070.318]: IsEmergencyDetected       [31mFAILURE[0m -> [36mIDLE[0m
+[krac_bt_runner-1] [1783649070.318]: EmergencyBranch           [33mRUNNING[0m -> [31mFAILURE[0m
+[krac_bt_runner-1] [1783649070.318]: EmergencyBranch           [31mFAILURE[0m -> [36mIDLE[0m
+[krac_bt_runner-1] [1783649070.418]: EmergencyBranch           [36mIDLE[0m -> [33mRUNNING[0m
+[krac_bt_runner-1] [1783649070.418]: IsEmergencyDetected       [36mIDLE[0m -> [31mFAILURE[0m
+[krac_bt_runner-1] [1783649070.418]: IsEmergencyDetected       [31mFAILURE[0m -> [36mIDLE[0m
+[krac_bt_runner-1] [1783649070.418]: EmergencyBranch           [33mRUNNING[0m -> [31mFAILURE[0m
+[krac_bt_runner-1] [1783649070.418]: EmergencyBranch           [31mFAILURE[0m -> [36mIDLE[0m
+[krac_bt_runner-1] [1783649070.518]: EmergencyBranch           [36mIDLE[0m -> [33mRUNNING[0m
+[krac_bt_runner-1] [1783649070.518]: IsEmergencyDetected       [36mIDLE[0m -> [31mFAILURE[0m
+[krac_bt_runner-1] [1783649070.518]: IsEmergencyDetected       [31mFAILURE[0m -> [36mIDLE[0m
+[krac_bt_runner-1] [1783649070.518]: EmergencyBranch           [33mRUNNING[0m -> [31mFAILURE[0m
+[krac_bt_runner-1] [1783649070.518]: EmergencyBranch           [31mFAILURE[0m -> [36mIDLE[0m
+[krac_bt_runner-1] [1783649070.618]: EmergencyBranch           [36mIDLE[0m -> [33mRUNNING[0m
+[krac_bt_runner-1] [1783649070.618]: IsEmergencyDetected       [36mIDLE[0m -> [31mFAILURE[0m
+[krac_bt_runner-1] [1783649070.618]: IsEmergencyDetected       [31mFAILURE[0m -> [36mIDLE[0m
+[krac_bt_runner-1] [1783649070.618]: EmergencyBranch           [33mRUNNING[0m -> [31mFAILURE[0m
+[krac_bt_runner-1] [1783649070.618]: EmergencyBranch           [31mFAILURE[0m -> [36mIDLE[0m
+[krac_bt_runner-1] [1783649070.718]: EmergencyBranch           [36mIDLE[0m -> [33mRUNNING[0m
+[krac_bt_runner-1] [1783649070.718]: IsEmergencyDetected       [36mIDLE[0m -> [31mFAILURE[0m
+[krac_bt_runner-1] [1783649070.718]: IsEmergencyDetected       [31mFAILURE[0m -> [36mIDLE[0m
+[krac_bt_runner-1] [1783649070.718]: EmergencyBranch           [33mRUNNING[0m -> [31mFAILURE[0m
+[krac_bt_runner-1] [1783649070.718]: EmergencyBranch           [31mFAILURE[0m -> [36mIDLE[0m
+[krac_bt_runner-1] [1783649070.818]: EmergencyBranch           [36mIDLE[0m -> [33mRUNNING[0m
+[krac_bt_runner-1] [1783649070.818]: IsEmergencyDetected       [36mIDLE[0m -> [31mFAILURE[0m
+[krac_bt_runner-1] [1783649070.818]: IsEmergencyDetected       [31mFAILURE[0m -> [36mIDLE[0m
+[krac_bt_runner-1] [1783649070.818]: EmergencyBranch           [33mRUNNING[0m -> [31mFAILURE[0m
+[krac_bt_runner-1] [1783649070.818]: EmergencyBranch           [31mFAILURE[0m -> [36mIDLE[0m
+[krac_bt_runner-1] [1783649070.918]: EmergencyBranch           [36mIDLE[0m -> [33mRUNNING[0m
+[krac_bt_runner-1] [1783649070.918]: IsEmergencyDetected       [36mIDLE[0m -> [31mFAILURE[0m
+[krac_bt_runner-1] [1783649070.918]: IsEmergencyDetected       [31mFAILURE[0m -> [36mIDLE[0m
+[krac_bt_runner-1] [1783649070.918]: EmergencyBranch           [33mRUNNING[0m -> [31mFAILURE[0m
+[krac_bt_runner-1] [1783649070.918]: EmergencyBranch           [31mFAILURE[0m -> [36mIDLE[0m
+[krac_bt_runner-1] [1783649071.018]: EmergencyBranch           [36mIDLE[0m -> [33mRUNNING[0m
+[krac_bt_runner-1] [1783649071.018]: IsEmergencyDetected       [36mIDLE[0m -> [31mFAILURE[0m
+[krac_bt_runner-1] [1783649071.018]: IsEmergencyDetected       [31mFAILURE[0m -> [36mIDLE[0m
+[krac_bt_runner-1] [1783649071.018]: EmergencyBranch           [33mRUNNING[0m -> [31mFAILURE[0m
+[krac_bt_runner-1] [1783649071.018]: EmergencyBranch           [31mFAILURE[0m -> [36mIDLE[0m
+[krac_bt_runner-1] [1783649071.118]: EmergencyBranch           [36mIDLE[0m -> [33mRUNNING[0m
+[krac_bt_runner-1] [1783649071.118]: IsEmergencyDetected       [36mIDLE[0m -> [31mFAILURE[0m
+[krac_bt_runner-1] [1783649071.118]: IsEmergencyDetected       [31mFAILURE[0m -> [36mIDLE[0m
+[krac_bt_runner-1] [1783649071.118]: EmergencyBranch           [33mRUNNING[0m -> [31mFAILURE[0m
+[krac_bt_runner-1] [1783649071.118]: EmergencyBranch           [31mFAILURE[0m -> [36mIDLE[0m
+[krac_bt_runner-1] [1783649071.218]: EmergencyBranch           [36mIDLE[0m -> [33mRUNNING[0m
+[krac_bt_runner-1] [1783649071.218]: IsEmergencyDetected       [36mIDLE[0m -> [31mFAILURE[0m
+[krac_bt_runner-1] [1783649071.218]: IsEmergencyDetected       [31mFAILURE[0m -> [36mIDLE[0m
+[krac_bt_runner-1] [1783649071.218]: EmergencyBranch           [33mRUNNING[0m -> [31mFAILURE[0m
+[krac_bt_runner-1] [1783649071.218]: EmergencyBranch           [31mFAILURE[0m -> [36mIDLE[0m
+[krac_bt_runner-1] [1783649071.318]: EmergencyBranch           [36mIDLE[0m -> [33mRUNNING[0m
+[krac_bt_runner-1] [1783649071.318]: IsEmergencyDetected       [36mIDLE[0m -> [31mFAILURE[0m
+[krac_bt_runner-1] [1783649071.318]: IsEmergencyDetected       [31mFAILURE[0m -> [36mIDLE[0m
+[krac_bt_runner-1] [1783649071.318]: EmergencyBranch           [33mRUNNING[0m -> [31mFAILURE[0m
+[krac_bt_runner-1] [1783649071.318]: EmergencyBranch           [31mFAILURE[0m -> [36mIDLE[0m
+[krac_bt_runner-1] [1783649071.418]: EmergencyBranch           [36mIDLE[0m -> [33mRUNNING[0m
+[krac_bt_runner-1] [1783649071.418]: IsEmergencyDetected       [36mIDLE[0m -> [31mFAILURE[0m
+[krac_bt_runner-1] [1783649071.418]: IsEmergencyDetected       [31mFAILURE[0m -> [36mIDLE[0m
+[krac_bt_runner-1] [1783649071.418]: EmergencyBranch           [33mRUNNING[0m -> [31mFAILURE[0m
+[krac_bt_runner-1] [1783649071.418]: EmergencyBranch           [31mFAILURE[0m -> [36mIDLE[0m
+[krac_bt_runner-1] [1783649071.518]: EmergencyBranch           [36mIDLE[0m -> [33mRUNNING[0m
+[krac_bt_runner-1] [1783649071.518]: IsEmergencyDetected       [36mIDLE[0m -> [31mFAILURE[0m
+[krac_bt_runner-1] [1783649071.518]: IsEmergencyDetected       [31mFAILURE[0m -> [36mIDLE[0m
+[krac_bt_runner-1] [1783649071.518]: EmergencyBranch           [33mRUNNING[0m -> [31mFAILURE[0m
+[krac_bt_runner-1] [1783649071.518]: EmergencyBranch           [31mFAILURE[0m -> [36mIDLE[0m
+[krac_bt_runner-1] [1783649071.618]: EmergencyBranch           [36mIDLE[0m -> [33mRUNNING[0m
+[krac_bt_runner-1] [1783649071.618]: IsEmergencyDetected       [36mIDLE[0m -> [31mFAILURE[0m
+[krac_bt_runner-1] [1783649071.618]: IsEmergencyDetected       [31mFAILURE[0m -> [36mIDLE[0m
+[krac_bt_runner-1] [1783649071.618]: EmergencyBranch           [33mRUNNING[0m -> [31mFAILURE[0m
+[krac_bt_runner-1] [1783649071.618]: EmergencyBranch           [31mFAILURE[0m -> [36mIDLE[0m
+[krac_bt_runner-1] [1783649071.718]: EmergencyBranch           [36mIDLE[0m -> [33mRUNNING[0m
+[krac_bt_runner-1] [1783649071.718]: IsEmergencyDetected       [36mIDLE[0m -> [31mFAILURE[0m
+[krac_bt_runner-1] [1783649071.718]: IsEmergencyDetected       [31mFAILURE[0m -> [36mIDLE[0m
+[krac_bt_runner-1] [1783649071.718]: EmergencyBranch           [33mRUNNING[0m -> [31mFAILURE[0m
+[krac_bt_runner-1] [1783649071.718]: EmergencyBranch           [31mFAILURE[0m -> [36mIDLE[0m
+[krac_bt_runner-1] [1783649071.818]: EmergencyBranch           [36mIDLE[0m -> [33mRUNNING[0m
+[krac_bt_runner-1] [1783649071.818]: IsEmergencyDetected       [36mIDLE[0m -> [31mFAILURE[0m
+[krac_bt_runner-1] [1783649071.818]: IsEmergencyDetected       [31mFAILURE[0m -> [36mIDLE[0m
+[krac_bt_runner-1] [1783649071.818]: EmergencyBranch           [33mRUNNING[0m -> [31mFAILURE[0m
+[krac_bt_runner-1] [1783649071.818]: EmergencyBranch           [31mFAILURE[0m -> [36mIDLE[0m
+[krac_bt_runner-1] [1783649071.918]: EmergencyBranch           [36mIDLE[0m -> [33mRUNNING[0m
+[krac_bt_runner-1] [1783649071.918]: IsEmergencyDetected       [36mIDLE[0m -> [31mFAILURE[0m
+[krac_bt_runner-1] [1783649071.918]: IsEmergencyDetected       [31mFAILURE[0m -> [36mIDLE[0m
+[krac_bt_runner-1] [1783649071.918]: EmergencyBranch           [33mRUNNING[0m -> [31mFAILURE[0m
+[krac_bt_runner-1] [1783649071.918]: EmergencyBranch           [31mFAILURE[0m -> [36mIDLE[0m
+[krac_bt_runner-1] [1783649072.018]: EmergencyBranch           [36mIDLE[0m -> [33mRUNNING[0m
+[krac_bt_runner-1] [1783649072.018]: IsEmergencyDetected       [36mIDLE[0m -> [31mFAILURE[0m
+[krac_bt_runner-1] [1783649072.018]: IsEmergencyDetected       [31mFAILURE[0m -> [36mIDLE[0m
+[krac_bt_runner-1] [1783649072.018]: EmergencyBranch           [33mRUNNING[0m -> [31mFAILURE[0m
+[krac_bt_runner-1] [1783649072.018]: EmergencyBranch           [31mFAILURE[0m -> [36mIDLE[0m
+[krac_bt_runner-1] [1783649072.118]: EmergencyBranch           [36mIDLE[0m -> [33mRUNNING[0m
+[krac_bt_runner-1] [1783649072.118]: IsEmergencyDetected       [36mIDLE[0m -> [31mFAILURE[0m
+[krac_bt_runner-1] [1783649072.118]: IsEmergencyDetected       [31mFAILURE[0m -> [36mIDLE[0m
+[krac_bt_runner-1] [1783649072.118]: EmergencyBranch           [33mRUNNING[0m -> [31mFAILURE[0m
+[krac_bt_runner-1] [1783649072.118]: EmergencyBranch           [31mFAILURE[0m -> [36mIDLE[0m
+[krac_bt_runner-1] [1783649072.218]: EmergencyBranch           [36mIDLE[0m -> [33mRUNNING[0m
+[krac_bt_runner-1] [1783649072.218]: IsEmergencyDetected       [36mIDLE[0m -> [31mFAILURE[0m
+[krac_bt_runner-1] [1783649072.218]: IsEmergencyDetected       [31mFAILURE[0m -> [36mIDLE[0m
+[krac_bt_runner-1] [1783649072.218]: EmergencyBranch           [33mRUNNING[0m -> [31mFAILURE[0m
+[krac_bt_runner-1] [WARN] [1783649072.218265768] [krac_bt_runner]: GlobalMissionRecovery active. policy=hold. Mission is held.
+[krac_bt_runner-1] [1783649072.218]: EmergencyBranch           [31mFAILURE[0m -> [36mIDLE[0m
+[krac_bt_runner-1] [1783649072.318]: EmergencyBranch           [36mIDLE[0m -> [33mRUNNING[0m
+[krac_bt_runner-1] [1783649072.318]: IsEmergencyDetected       [36mIDLE[0m -> [31mFAILURE[0m
+[krac_bt_runner-1] [1783649072.318]: IsEmergencyDetected       [31mFAILURE[0m -> [36mIDLE[0m
+[krac_bt_runner-1] [1783649072.318]: EmergencyBranch           [33mRUNNING[0m -> [31mFAILURE[0m
+[krac_bt_runner-1] [1783649072.318]: EmergencyBranch           [31mFAILURE[0m -> [36mIDLE[0m
+[krac_bt_runner-1] [1783649072.418]: EmergencyBranch           [36mIDLE[0m -> [33mRUNNING[0m
+[krac_bt_runner-1] [1783649072.418]: IsEmergencyDetected       [36mIDLE[0m -> [31mFAILURE[0m
+[krac_bt_runner-1] [1783649072.418]: IsEmergencyDetected       [31mFAILURE[0m -> [36mIDLE[0m
+[krac_bt_runner-1] [1783649072.418]: EmergencyBranch           [33mRUNNING[0m -> [31mFAILURE[0m
+[krac_bt_runner-1] [1783649072.418]: EmergencyBranch           [31mFAILURE[0m -> [36mIDLE[0m
+[krac_bt_runner-1] [1783649072.518]: EmergencyBranch           [36mIDLE[0m -> [33mRUNNING[0m
+[krac_bt_runner-1] [1783649072.518]: IsEmergencyDetected       [36mIDLE[0m -> [31mFAILURE[0m
+[krac_bt_runner-1] [1783649072.518]: IsEmergencyDetected       [31mFAILURE[0m -> [36mIDLE[0m
+[krac_bt_runner-1] [1783649072.518]: EmergencyBranch           [33mRUNNING[0m -> [31mFAILURE[0m
+[krac_bt_runner-1] [1783649072.518]: EmergencyBranch           [31mFAILURE[0m -> [36mIDLE[0m
+[krac_bt_runner-1] [1783649072.618]: EmergencyBranch           [36mIDLE[0m -> [33mRUNNING[0m
+[krac_bt_runner-1] [1783649072.618]: IsEmergencyDetected       [36mIDLE[0m -> [31mFAILURE[0m
+[krac_bt_runner-1] [1783649072.618]: IsEmergencyDetected       [31mFAILURE[0m -> [36mIDLE[0m
+[krac_bt_runner-1] [1783649072.618]: EmergencyBranch           [33mRUNNING[0m -> [31mFAILURE[0m
+[krac_bt_runner-1] [1783649072.618]: EmergencyBranch           [31mFAILURE[0m -> [36mIDLE[0m
+[krac_bt_runner-1] [1783649072.718]: EmergencyBranch           [36mIDLE[0m -> [33mRUNNING[0m
+[krac_bt_runner-1] [1783649072.718]: IsEmergencyDetected       [36mIDLE[0m -> [31mFAILURE[0m
+[krac_bt_runner-1] [1783649072.718]: IsEmergencyDetected       [31mFAILURE[0m -> [36mIDLE[0m
+[krac_bt_runner-1] [1783649072.718]: EmergencyBranch           [33mRUNNING[0m -> [31mFAILURE[0m
+[krac_bt_runner-1] [1783649072.718]: EmergencyBranch           [31mFAILURE[0m -> [36mIDLE[0m
+[krac_bt_runner-1] [1783649072.818]: EmergencyBranch           [36mIDLE[0m -> [33mRUNNING[0m
+[krac_bt_runner-1] [1783649072.818]: IsEmergencyDetected       [36mIDLE[0m -> [31mFAILURE[0m
+[krac_bt_runner-1] [1783649072.818]: IsEmergencyDetected       [31mFAILURE[0m -> [36mIDLE[0m
+[krac_bt_runner-1] [1783649072.818]: EmergencyBranch           [33mRUNNING[0m -> [31mFAILURE[0m
+[krac_bt_runner-1] [1783649072.818]: EmergencyBranch           [31mFAILURE[0m -> [36mIDLE[0m
+[krac_bt_runner-1] [1783649072.918]: EmergencyBranch           [36mIDLE[0m -> [33mRUNNING[0m
+[krac_bt_runner-1] [1783649072.918]: IsEmergencyDetected       [36mIDLE[0m -> [31mFAILURE[0m
+[krac_bt_runner-1] [1783649072.918]: IsEmergencyDetected       [31mFAILURE[0m -> [36mIDLE[0m
+[krac_bt_runner-1] [1783649072.918]: EmergencyBranch           [33mRUNNING[0m -> [31mFAILURE[0m
+[krac_bt_runner-1] [1783649072.918]: EmergencyBranch           [31mFAILURE[0m -> [36mIDLE[0m
+[krac_bt_runner-1] [1783649073.018]: EmergencyBranch           [36mIDLE[0m -> [33mRUNNING[0m
+[krac_bt_runner-1] [1783649073.018]: IsEmergencyDetected       [36mIDLE[0m -> [31mFAILURE[0m
+[krac_bt_runner-1] [1783649073.018]: IsEmergencyDetected       [31mFAILURE[0m -> [36mIDLE[0m
+[krac_bt_runner-1] [1783649073.018]: EmergencyBranch           [33mRUNNING[0m -> [31mFAILURE[0m
+[krac_bt_runner-1] [1783649073.018]: EmergencyBranch           [31mFAILURE[0m -> [36mIDLE[0m
+[WARNING] [launch]: user interrupted with ctrl-c (SIGINT)
+[krac_bt_runner-1] [INFO] [1783649073.049190601] [rclcpp]: signal_handler(SIGINT/SIGTERM)
+[krac_bt_runner-1] [1783649073.050]: SafetyGuardedControlTeamMission [31mFAILURE[0m -> [36mIDLE[0m
+[krac_bt_runner-1] [1783649073.050]: GlobalMissionRecovery     [33mRUNNING[0m -> [36mIDLE[0m
+[krac_bt_runner-1] [1783649073.050]: MissionOrRecovery         [33mRUNNING[0m -> [36mIDLE[0m
+[krac_bt_runner-1] [1783649073.050]: ControlTeamRoot           [33mRUNNING[0m -> [36mIDLE[0m
+[krac_bt_runner-1] [WARN] [1783649073.049949665] [krac_bt_runner]: GlobalMissionRecovery halted.
+[INFO] [krac_bt_runner-1]: process has finished cleanly [pid 48190]
+
+===== Launch Tail =====
+==> /tmp/krac_ros_logs/control_team_20260710_110247/ros_logs/2026-07-10-11-02-49-122689-mudokim-Legion-5-15AHP10-46692/launch.log <==
+1783648969.1234219 [INFO] [launch]: All log files can be found below /tmp/krac_ros_logs/control_team_20260710_110247/ros_logs/2026-07-10-11-02-49-122689-mudokim-Legion-5-15AHP10-46692
+1783648969.1235349 [INFO] [launch]: Default logging verbosity is set to INFO
+1783648969.1687794 [INFO] [yolo_node-1]: process started with pid [46839]
+1783648969.1689348 [INFO] [vision_tracker-2]: process started with pid [46841]
+1783648969.1689892 [INFO] [precision_lander-3]: process started with pid [46843]
+1783649073.1611831 [INFO] [precision_lander-3]: process has finished cleanly [pid 46843]
+
+==> /tmp/krac_ros_logs/control_team_20260710_110247/ros_logs/2026-07-10-11-02-48-843227-mudokim-Legion-5-15AHP10-46578/launch.log <==
+1783648968.8440628 [INFO] [launch]: All log files can be found below /tmp/krac_ros_logs/control_team_20260710_110247/ros_logs/2026-07-10-11-02-48-843227-mudokim-Legion-5-15AHP10-46578
+1783648968.8441763 [INFO] [launch]: Default logging verbosity is set to INFO
+1783648968.8887362 [INFO] [make-1]: process started with pid [46672]
+1783648968.8889024 [INFO] [mavros_node-2]: process started with pid [46674]
+1783649073.0602827 [ERROR] [make-1]: process has died [pid 46672, exit code 2, cmd 'make px4_sitl gz_standard_vtol'].
+1783649073.1973534 [INFO] [mavros_node-2]: process has finished cleanly [pid 46674]
+
+==> /tmp/krac_ros_logs/control_team_20260710_110247/ros_logs/2026-07-10-11-03-09-483816-mudokim-Legion-5-15AHP10-48189/launch.log <==
+1783648989.4845238 [INFO] [launch]: All log files can be found below /tmp/krac_ros_logs/control_team_20260710_110247/ros_logs/2026-07-10-11-03-09-483816-mudokim-Legion-5-15AHP10-48189
+1783648989.4846311 [INFO] [launch]: Default logging verbosity is set to INFO
+1783648989.5159838 [INFO] [krac_bt_runner-1]: process started with pid [48190]
+1783649073.0492909 [WARNING] [launch]: user interrupted with ctrl-c (SIGINT)
+1783649073.2192183 [INFO] [krac_bt_runner-1]: process has finished cleanly [pid 48190]
+
+==> /tmp/krac_ros_logs/control_team_20260710_110247/sitl_vtol.launch.log <==
+[make-1] ERROR [mavlink] vehicle_command_ack lost, generation 13240 -> 13791
+[make-1] ERROR [mavlink] vehicle_command_ack lost, generation 13240 -> 13793
+[make-1] ERROR [mavlink] vehicle_command_ack lost, generation 13791 -> 13794
+[make-1] ERROR [mavlink] vehicle_command_ack lost, generation 13240 -> 13795
+[make-1] ERROR [mavlink] vehicle_command_ack lost, generation 13794 -> 13796
+[make-1] ERROR [mavlink] vehicle_command_ack lost, generation 13316 -> 13795
+[make-1] ERROR [mavlink] vehicle_command_ack lost, generation 13795 -> 13798
+[make-1] ERROR [mavlink] vehicle_command_ack lost, generation 13795 -> 13799
+[make-1] ERROR [mavlink] vehicle_command_ack lost, generation 13793 -> 13799
+[make-1] ERROR [mavlink] vehicle_command_ack lost, generation 13803 -> 14225
+[make-1] ERROR [mavlink] vehicle_command_ack lost, generation 14225 -> 14227
+[make-1] ERROR [mavlink] vehicle_command_ack lost, generation 13807 -> 14226
+[make-1] ERROR [mavlink] vehicle_command_ack lost, generation 13808 -> 14227
+[make-1] ERROR [mavlink] vehicle_command_ack lost, generation 13805 -> 14226
+[make-1] ERROR [mavlink] vehicle_command_ack lost, generation 14226 -> 14228
+[make-1] ERROR [mavlink] vehicle_command_ack lost, generation 14227 -> 14229
+[make-1] ERROR [mavlink] vehicle_command_ack lost, generation 14226 -> 14229
+[make-1] ERROR [mavlink] vehicle_command_ack lost, generation 14234 -> 14871
+[make-1] ERROR [mavlink] vehicle_command_ack lost, generation 14236 -> 14872
+[make-1] ERROR [mavlink] vehicle_command_ack lost, generation 14235 -> 14872
+[make-1] ERROR [mavlink] vehicle_command_ack lost, generation 14236 -> 14874
+[make-1] ERROR [mavlink] vehicle_command_ack lost, generation 14879 -> 15246
+[make-1] ERROR [mavlink] vehicle_command_ack lost, generation 14882 -> 15247
+[make-1] ERROR [mavlink] vehicle_command_ack lost, generation 15246 -> 15248
+[make-1] ERROR [mavlink] vehicle_command_ack lost, generation 14882 -> 15247
+[make-1] ERROR [mavlink] vehicle_command_ack lost, generation 15247 -> 15249
+[make-1] ERROR [mavlink] vehicle_command_ack lost, generation 15247 -> 15253
+[make-1] ERROR [mavlink] vehicle_command_ack lost, generation 15249 -> 15259
+[make-1] ERROR [mavlink] vehicle_command_ack lost, generation 14880 -> 15314
+[make-1] ERROR [mavlink] vehicle_command_ack lost, generation 15255 -> 15513
+[make-1] ERROR [mavlink] vehicle_command_ack lost, generation 15513 -> 15515
+[make-1] ERROR [mavlink] vehicle_command_ack lost, generation 15322 -> 15515
+[make-1] ERROR [mavlink] vehicle_command_ack lost, generation 15266 -> 15515
+[make-1] ERROR [mavlink] vehicle_command_ack lost, generation 15266 -> 15514
+[make-1] ERROR [mavlink] vehicle_command_ack lost, generation 15515 -> 15518
+[make-1] ERROR [mavlink] vehicle_command_ack lost, generation 15514 -> 15518
+[make-1] ERROR [mavlink] vehicle_command_ack lost, generation 15523 -> 16070
+[make-1] ERROR [mavlink] vehicle_command_ack lost, generation 15525 -> 16073
+[make-1] ERROR [mavlink] vehicle_command_ack lost, generation 16070 -> 16073
+[make-1] ERROR [mavlink] vehicle_command_ack lost, generation 16073 -> 16075
+[make-1] ERROR [mavlink] vehicle_command_ack lost, generation 16073 -> 16075
+[make-1] ERROR [mavlink] vehicle_command_ack lost, generation 15525 -> 16082
+[make-1] ERROR [mavlink] vehicle_command_ack lost, generation 15523 -> 16071
+[make-1] ERROR [mavlink] vehicle_command_ack lost, generation 16071 -> 16206
+[make-1] ERROR [mavlink] vehicle_command_ack lost, generation 16083 -> 16653
+[make-1] ERROR [mavlink] vehicle_command_ack lost, generation 16098 -> 16655
+[make-1] ERROR [mavlink] vehicle_command_ack lost, generation 16213 -> 16654
+[make-1] ERROR [mavlink] vehicle_command_ack lost, generation 16088 -> 16655
+[make-1] ERROR [mavlink] vehicle_command_ack lost, generation 16653 -> 16656
+[make-1] ERROR [mavlink] vehicle_command_ack lost, generation 16655 -> 16657
+[make-1] ERROR [mavlink] vehicle_command_ack lost, generation 16654 -> 16657
+[make-1] ERROR [mavlink] vehicle_command_ack lost, generation 16655 -> 16657
+[make-1] ERROR [mavlink] vehicle_command_ack lost, generation 16657 -> 16659
+[make-1] ERROR [mavlink] vehicle_command_ack lost, generation 16664 -> 17253
+[make-1] ERROR [mavlink] vehicle_command_ack lost, generation 17253 -> 17255
+[make-1] ERROR [mavlink] vehicle_command_ack lost, generation 16681 -> 17254
+[make-1] ERROR [mavlink] vehicle_command_ack lost, generation 16678 -> 17254
+[make-1] ERROR [mavlink] vehicle_command_ack lost, generation 16681 -> 17254
+[make-1] ERROR [mavlink] vehicle_command_ack lost, generation 17254 -> 17256
+[make-1] ERROR [mavlink] vehicle_command_ack lost, generation 17254 -> 17256
+[make-1] ERROR [mavlink] vehicle_command_ack lost, generation 17262 -> 18023
+[make-1] ERROR [mavlink] vehicle_command_ack lost, generation 17263 -> 18025
+[make-1] ERROR [mavlink] vehicle_command_ack lost, generation 18023 -> 18026
+[make-1] ERROR [mavlink] vehicle_command_ack lost, generation 17262 -> 18023
+[make-1] ERROR [mavlink] vehicle_command_ack lost, generation 17263 -> 18023
+[make-1] ERROR [mavlink] vehicle_command_ack lost, generation 18023 -> 18029
+[make-1] ERROR [mavlink] vehicle_command_ack lost, generation 18027 -> 18029
+[make-1] ERROR [mavlink] vehicle_command_ack lost, generation 18023 -> 18029
+[make-1] ERROR [mavlink] vehicle_command_ack lost, generation 18029 -> 18031
+[make-1] ERROR [mavlink] vehicle_command_ack lost, generation 18029 -> 18031
+[make-1] ERROR [mavlink] vehicle_command_ack lost, generation 18037 -> 18039
+[make-1] ERROR [mavlink] vehicle_command_ack lost, generation 18038 -> 18040
+[make-1] ERROR [mavlink] vehicle_command_ack lost, generation 18040 -> 18042
+[make-1] ERROR [mavlink] vehicle_command_ack lost, generation 18053 -> 18421
+[make-1] ERROR [mavlink] vehicle_command_ack lost, generation 18421 -> 18423
+[make-1] ERROR [mavlink] vehicle_command_ack lost, generation 18054 -> 18422
+[make-1] ERROR [mavlink] vehicle_command_ack lost, generation 18056 -> 18424
+[make-1] ERROR [mavlink] vehicle_command_ack lost, generation 18422 -> 18424
+[make-1] ERROR [mavlink] vehicle_command_ack lost, generation 18424 -> 18426
+[make-1] ERROR [mavlink] vehicle_command_ack lost, generation 18424 -> 18429
+[make-1] ERROR [mavlink] vehicle_command_ack lost, generation 18056 -> 18429
+[make-1] ERROR [mavlink] vehicle_command_ack lost, generation 18430 -> 19040
+[make-1] ERROR [mavlink] vehicle_command_ack lost, generation 19040 -> 19044
+[make-1] ERROR [mavlink] vehicle_command_ack lost, generation 18457 -> 19042
+[make-1] ERROR [mavlink] vehicle_command_ack lost, generation 18453 -> 19042
+[make-1] ERROR [mavlink] vehicle_command_ack lost, generation 19042 -> 19047
+[make-1] ERROR [mavlink] vehicle_command_ack lost, generation 18457 -> 19042
+[make-1] ERROR [mavlink] vehicle_command_ack lost, generation 19042 -> 19051
+[make-1] ERROR [mavlink] vehicle_command_ack lost, generation 19042 -> 19051
+[make-1] ERROR [mavlink] vehicle_command_ack lost, generation 19052 -> 19940
+[make-1] ERROR [mavlink] vehicle_command_ack lost, generation 19058 -> 19940
+[make-1] ERROR [mavlink] vehicle_command_ack lost, generation 19055 -> 19940
+[make-1] ERROR [mavlink] vehicle_command_ack lost, generation 19058 -> 19940
+[make-1] ERROR [mavlink] vehicle_command_ack lost, generation 19940 -> 19943
+[make-1] ERROR [mavlink] vehicle_command_ack lost, generation 19947 -> 20114
+[make-1] ERROR [mavlink] vehicle_command_ack lost, generation 20114 -> 20116
+[make-1] ERROR [mavlink] vehicle_command_ack lost, generation 19950 -> 20118
+[make-1] ERROR [mavlink] vehicle_command_ack lost, generation 19950 -> 20118
+[make-1] ERROR [mavlink] vehicle_command_ack lost, generation 19947 -> 20122
+[make-1] ERROR [mavlink] vehicle_command_ack lost, generation 20118 -> 20122
+[make-1] ERROR [mavlink] vehicle_command_ack lost, generation 20118 -> 20122
+[make-1] ERROR [mavlink] vehicle_command_ack lost, generation 20124 -> 20708
+[make-1] ERROR [mavlink] vehicle_command_ack lost, generation 20129 -> 20709
+[make-1] ERROR [mavlink] vehicle_command_ack lost, generation 20129 -> 20709
+[make-1] ERROR [mavlink] vehicle_command_ack lost, generation 20129 -> 20709
+[make-1] ERROR [mavlink] vehicle_command_ack lost, generation 20716 -> 21371
+[make-1] ERROR [mavlink] vehicle_command_ack lost, generation 21371 -> 21374
+[make-1] ERROR [mavlink] vehicle_command_ack lost, generation 20717 -> 21372
+[make-1] ERROR [mavlink] vehicle_command_ack lost, generation 20716 -> 21372
+[make-1] ERROR [mavlink] vehicle_command_ack lost, generation 21372 -> 21376
+[make-1] ERROR [mavlink] vehicle_command_ack lost, generation 20717 -> 21372
+[make-1] ERROR [mavlink] vehicle_command_ack lost, generation 21372 -> 21381
+[make-1] ERROR [mavlink] vehicle_command_ack lost, generation 21372 -> 21381
+[make-1] ERROR [mavlink] vehicle_command_ack lost, generation 21382 -> 21931
+[make-1] ERROR [mavlink] vehicle_command_ack lost, generation 21388 -> 21932
+[make-1] ERROR [mavlink] vehicle_command_ack lost, generation 21931 -> 21933
+[make-1] ERROR [mavlink] vehicle_command_ack lost, generation 21388 -> 21932
+[make-1] ERROR [mavlink] vehicle_command_ack lost, generation 21384 -> 21932
+[make-1] ERROR [mavlink] vehicle_command_ack lost, generation 21932 -> 21935
+[make-1] ERROR [mavlink] vehicle_command_ack lost, generation 21932 -> 21935
+[make-1] ERROR [mavlink] vehicle_command_ack lost, generation 21932 -> 21935
+[make-1] ERROR [mavlink] vehicle_command_ack lost, generation 21940 -> 22607
+[make-1] ERROR [mavlink] vehicle_command_ack lost, generation 22607 -> 22609
+[make-1] ERROR [mavlink] vehicle_command_ack lost, generation 21942 -> 22607
+[make-1] ERROR [mavlink] vehicle_command_ack lost, generation 21943 -> 22607
+[make-1] ERROR [mavlink] vehicle_command_ack lost, generation 21943 -> 22607
+[make-1] ERROR [mavlink] vehicle_command_ack lost, generation 22607 -> 22610
+[make-1] ERROR [mavlink] vehicle_command_ack lost, generation 22610 -> 22612
+[make-1] ERROR [mavlink] vehicle_command_ack lost, generation 22607 -> 22612
+[make-1] ERROR [mavlink] vehicle_command_ack lost, generation 22607 -> 22612
+[make-1] ERROR [mavlink] vehicle_command_ack lost, generation 22617 -> 23139
+[make-1] ERROR [mavlink] vehicle_command_ack lost, generation 23139 -> 23143
+[make-1] ERROR [mavlink] vehicle_command_ack lost, generation 22619 -> 23147
+[make-1] ERROR [mavlink] vehicle_command_ack lost, generation 23148 -> 23150
+[make-1] ERROR [mavlink] vehicle_command_ack lost, generation 22619 -> 23141
+[make-1] ERROR [mavlink] vehicle_command_ack lost, generation 22619 -> 23141
+[make-1] ERROR [mavlink] vehicle_command_ack lost, generation 23141 -> 23259
+[make-1] ERROR [mavlink] vehicle_command_ack lost, generation 23141 -> 23258
+[make-1] ERROR [mavlink] vehicle_command_ack lost, generation 23258 -> 23268
+[make-1] ERROR [mavlink] vehicle_command_ack lost, generation 23155 -> 23714
+[make-1] ERROR [mavlink] vehicle_command_ack lost, generation 23276 -> 23714
+[make-1] ERROR [mavlink] vehicle_command_ack lost, generation 23277 -> 23714
+[make-1] ERROR [mavlink] vehicle_command_ack lost, generation 23164 -> 23714
+[mavros_node-2] [WARN] [1783649038.616791521] [mavros.sys]: FCU: UNK(8): EVENT 11047904 with args -0-0-0-0-0-128-0-0-0-176-122-127-128-176-122-127-128-0-0-0-0-0-0-0-0-0-0-0-0-0-0-0-0-0-0-0-0-0-0-0-
+[mavros_node-2] [INFO] [1783649038.616889925] [mavros.sys]: FCU: EVENT 377561 with args -8-0-0-0-20-0-0-0-0-0-0-0-0-0-0-0-0-0-0-0-0-0-0-0-0-0-0-0-0-0-0-0-0-0-0-0-0-0-0-0-
+[mavros_node-2] [WARN] [1783649038.616990554] [mavros.sys]: FCU: EVENT 453929 with args -255-255-255-255-7-0-0-0-0-0-0-0-0-0-0-0-0-0-0-0-0-0-0-0-0-0-0-0-0-0-0-0-0-0-0-0-0-0-0-0-
+[mavros_node-2] [WARN] [1783649038.617031591] [mavros.sys]: FCU: UNK(8): EVENT 1914663 with args -0-14-29-2-56-0-0-0-0-0-0-0-0-0-0-0-0-0-0-0-0-0-0-0-0-0-0-0-0-0-0-0-0-0-0-0-0-0-0-0-
+[mavros_node-2] [WARN] [1783649038.620888139] [mavros.sys]: FCU: UNK(8): EVENT 11047904 with args -0-0-0-0-0-128-0-0-0-176-122-127-128-176-122-127-128-0-0-0-0-0-0-0-0-0-0-0-0-0-0-0-0-0-0-0-0-0-0-0-
+[mavros_node-2] [INFO] [1783649038.620997574] [mavros.sys]: FCU: EVENT 377561 with args -8-0-0-0-20-0-0-0-0-0-0-0-0-0-0-0-0-0-0-0-0-0-0-0-0-0-0-0-0-0-0-0-0-0-0-0-0-0-0-0-
+[mavros_node-2] [WARN] [1783649038.621094837] [mavros.sys]: FCU: EVENT 453929 with args -255-255-255-255-7-0-0-0-0-0-0-0-0-0-0-0-0-0-0-0-0-0-0-0-0-0-0-0-0-0-0-0-0-0-0-0-0-0-0-0-
+[mavros_node-2] [WARN] [1783649038.621176440] [mavros.sys]: FCU: UNK(8): EVENT 1914663 with args -0-14-29-2-56-0-0-0-0-0-0-0-0-0-0-0-0-0-0-0-0-0-0-0-0-0-0-0-0-0-0-0-0-0-0-0-0-0-0-0-
+[make-1] 
+[make-1] PX4 Exiting...
+[make-1] [2Kpxh> Exiting NOW.
+[mavros_node-2] [INFO] [1783649073.049223773] [rclcpp]: signal_handler(SIGINT/SIGTERM)
+[mavros_node-2] [WARN] [1783649073.051807652] [mavros.mavros]: UAS Executor terminated
+[make-1] ninja: build stopped: interrupted by user.
+[make-1] make: *** [Makefile:250: px4_sitl] 오류 130
+[ERROR] [make-1]: process has died [pid 46672, exit code 2, cmd 'make px4_sitl gz_standard_vtol'].
+[INFO] [mavros_node-2]: process has finished cleanly [pid 46674]
+
+==> /tmp/krac_ros_logs/control_team_20260710_110247/krac_bt_runner.launch.log <==
+[krac_bt_runner-1] [1783649070.118]: EmergencyBranch           [36mIDLE[0m -> [33mRUNNING[0m
+[krac_bt_runner-1] [1783649070.118]: IsEmergencyDetected       [36mIDLE[0m -> [31mFAILURE[0m
+[krac_bt_runner-1] [1783649070.118]: IsEmergencyDetected       [31mFAILURE[0m -> [36mIDLE[0m
+[krac_bt_runner-1] [1783649070.118]: EmergencyBranch           [33mRUNNING[0m -> [31mFAILURE[0m
+[krac_bt_runner-1] [WARN] [1783649070.118276669] [krac_bt_runner]: GlobalMissionRecovery active. policy=hold. Mission is held.
+[krac_bt_runner-1] [1783649070.118]: EmergencyBranch           [31mFAILURE[0m -> [36mIDLE[0m
+[krac_bt_runner-1] [1783649070.218]: EmergencyBranch           [36mIDLE[0m -> [33mRUNNING[0m
+[krac_bt_runner-1] [1783649070.218]: IsEmergencyDetected       [36mIDLE[0m -> [31mFAILURE[0m
+[krac_bt_runner-1] [1783649070.218]: IsEmergencyDetected       [31mFAILURE[0m -> [36mIDLE[0m
+[krac_bt_runner-1] [1783649070.218]: EmergencyBranch           [33mRUNNING[0m -> [31mFAILURE[0m
+[krac_bt_runner-1] [1783649070.218]: EmergencyBranch           [31mFAILURE[0m -> [36mIDLE[0m
+[krac_bt_runner-1] [1783649070.318]: EmergencyBranch           [36mIDLE[0m -> [33mRUNNING[0m
+[krac_bt_runner-1] [1783649070.318]: IsEmergencyDetected       [36mIDLE[0m -> [31mFAILURE[0m
+[krac_bt_runner-1] [1783649070.318]: IsEmergencyDetected       [31mFAILURE[0m -> [36mIDLE[0m
+[krac_bt_runner-1] [1783649070.318]: EmergencyBranch           [33mRUNNING[0m -> [31mFAILURE[0m
+[krac_bt_runner-1] [1783649070.318]: EmergencyBranch           [31mFAILURE[0m -> [36mIDLE[0m
+[krac_bt_runner-1] [1783649070.418]: EmergencyBranch           [36mIDLE[0m -> [33mRUNNING[0m
+[krac_bt_runner-1] [1783649070.418]: IsEmergencyDetected       [36mIDLE[0m -> [31mFAILURE[0m
+[krac_bt_runner-1] [1783649070.418]: IsEmergencyDetected       [31mFAILURE[0m -> [36mIDLE[0m
+[krac_bt_runner-1] [1783649070.418]: EmergencyBranch           [33mRUNNING[0m -> [31mFAILURE[0m
+[krac_bt_runner-1] [1783649070.418]: EmergencyBranch           [31mFAILURE[0m -> [36mIDLE[0m
+[krac_bt_runner-1] [1783649070.518]: EmergencyBranch           [36mIDLE[0m -> [33mRUNNING[0m
+[krac_bt_runner-1] [1783649070.518]: IsEmergencyDetected       [36mIDLE[0m -> [31mFAILURE[0m
+[krac_bt_runner-1] [1783649070.518]: IsEmergencyDetected       [31mFAILURE[0m -> [36mIDLE[0m
+[krac_bt_runner-1] [1783649070.518]: EmergencyBranch           [33mRUNNING[0m -> [31mFAILURE[0m
+[krac_bt_runner-1] [1783649070.518]: EmergencyBranch           [31mFAILURE[0m -> [36mIDLE[0m
+[krac_bt_runner-1] [1783649070.618]: EmergencyBranch           [36mIDLE[0m -> [33mRUNNING[0m
+[krac_bt_runner-1] [1783649070.618]: IsEmergencyDetected       [36mIDLE[0m -> [31mFAILURE[0m
+[krac_bt_runner-1] [1783649070.618]: IsEmergencyDetected       [31mFAILURE[0m -> [36mIDLE[0m
+[krac_bt_runner-1] [1783649070.618]: EmergencyBranch           [33mRUNNING[0m -> [31mFAILURE[0m
+[krac_bt_runner-1] [1783649070.618]: EmergencyBranch           [31mFAILURE[0m -> [36mIDLE[0m
+[krac_bt_runner-1] [1783649070.718]: EmergencyBranch           [36mIDLE[0m -> [33mRUNNING[0m
+[krac_bt_runner-1] [1783649070.718]: IsEmergencyDetected       [36mIDLE[0m -> [31mFAILURE[0m
+[krac_bt_runner-1] [1783649070.718]: IsEmergencyDetected       [31mFAILURE[0m -> [36mIDLE[0m
+[krac_bt_runner-1] [1783649070.718]: EmergencyBranch           [33mRUNNING[0m -> [31mFAILURE[0m
+[krac_bt_runner-1] [1783649070.718]: EmergencyBranch           [31mFAILURE[0m -> [36mIDLE[0m
+[krac_bt_runner-1] [1783649070.818]: EmergencyBranch           [36mIDLE[0m -> [33mRUNNING[0m
+[krac_bt_runner-1] [1783649070.818]: IsEmergencyDetected       [36mIDLE[0m -> [31mFAILURE[0m
+[krac_bt_runner-1] [1783649070.818]: IsEmergencyDetected       [31mFAILURE[0m -> [36mIDLE[0m
+[krac_bt_runner-1] [1783649070.818]: EmergencyBranch           [33mRUNNING[0m -> [31mFAILURE[0m
+[krac_bt_runner-1] [1783649070.818]: EmergencyBranch           [31mFAILURE[0m -> [36mIDLE[0m
+[krac_bt_runner-1] [1783649070.918]: EmergencyBranch           [36mIDLE[0m -> [33mRUNNING[0m
+[krac_bt_runner-1] [1783649070.918]: IsEmergencyDetected       [36mIDLE[0m -> [31mFAILURE[0m
+[krac_bt_runner-1] [1783649070.918]: IsEmergencyDetected       [31mFAILURE[0m -> [36mIDLE[0m
+[krac_bt_runner-1] [1783649070.918]: EmergencyBranch           [33mRUNNING[0m -> [31mFAILURE[0m
+[krac_bt_runner-1] [1783649070.918]: EmergencyBranch           [31mFAILURE[0m -> [36mIDLE[0m
+[krac_bt_runner-1] [1783649071.018]: EmergencyBranch           [36mIDLE[0m -> [33mRUNNING[0m
+[krac_bt_runner-1] [1783649071.018]: IsEmergencyDetected       [36mIDLE[0m -> [31mFAILURE[0m
+[krac_bt_runner-1] [1783649071.018]: IsEmergencyDetected       [31mFAILURE[0m -> [36mIDLE[0m
+[krac_bt_runner-1] [1783649071.018]: EmergencyBranch           [33mRUNNING[0m -> [31mFAILURE[0m
+[krac_bt_runner-1] [1783649071.018]: EmergencyBranch           [31mFAILURE[0m -> [36mIDLE[0m
+[krac_bt_runner-1] [1783649071.118]: EmergencyBranch           [36mIDLE[0m -> [33mRUNNING[0m
+[krac_bt_runner-1] [1783649071.118]: IsEmergencyDetected       [36mIDLE[0m -> [31mFAILURE[0m
+[krac_bt_runner-1] [1783649071.118]: IsEmergencyDetected       [31mFAILURE[0m -> [36mIDLE[0m
+[krac_bt_runner-1] [1783649071.118]: EmergencyBranch           [33mRUNNING[0m -> [31mFAILURE[0m
+[krac_bt_runner-1] [1783649071.118]: EmergencyBranch           [31mFAILURE[0m -> [36mIDLE[0m
+[krac_bt_runner-1] [1783649071.218]: EmergencyBranch           [36mIDLE[0m -> [33mRUNNING[0m
+[krac_bt_runner-1] [1783649071.218]: IsEmergencyDetected       [36mIDLE[0m -> [31mFAILURE[0m
+[krac_bt_runner-1] [1783649071.218]: IsEmergencyDetected       [31mFAILURE[0m -> [36mIDLE[0m
+[krac_bt_runner-1] [1783649071.218]: EmergencyBranch           [33mRUNNING[0m -> [31mFAILURE[0m
+[krac_bt_runner-1] [1783649071.218]: EmergencyBranch           [31mFAILURE[0m -> [36mIDLE[0m
+[krac_bt_runner-1] [1783649071.318]: EmergencyBranch           [36mIDLE[0m -> [33mRUNNING[0m
+[krac_bt_runner-1] [1783649071.318]: IsEmergencyDetected       [36mIDLE[0m -> [31mFAILURE[0m
+[krac_bt_runner-1] [1783649071.318]: IsEmergencyDetected       [31mFAILURE[0m -> [36mIDLE[0m
+[krac_bt_runner-1] [1783649071.318]: EmergencyBranch           [33mRUNNING[0m -> [31mFAILURE[0m
+[krac_bt_runner-1] [1783649071.318]: EmergencyBranch           [31mFAILURE[0m -> [36mIDLE[0m
+[krac_bt_runner-1] [1783649071.418]: EmergencyBranch           [36mIDLE[0m -> [33mRUNNING[0m
+[krac_bt_runner-1] [1783649071.418]: IsEmergencyDetected       [36mIDLE[0m -> [31mFAILURE[0m
+[krac_bt_runner-1] [1783649071.418]: IsEmergencyDetected       [31mFAILURE[0m -> [36mIDLE[0m
+[krac_bt_runner-1] [1783649071.418]: EmergencyBranch           [33mRUNNING[0m -> [31mFAILURE[0m
+[krac_bt_runner-1] [1783649071.418]: EmergencyBranch           [31mFAILURE[0m -> [36mIDLE[0m
+[krac_bt_runner-1] [1783649071.518]: EmergencyBranch           [36mIDLE[0m -> [33mRUNNING[0m
+[krac_bt_runner-1] [1783649071.518]: IsEmergencyDetected       [36mIDLE[0m -> [31mFAILURE[0m
+[krac_bt_runner-1] [1783649071.518]: IsEmergencyDetected       [31mFAILURE[0m -> [36mIDLE[0m
+[krac_bt_runner-1] [1783649071.518]: EmergencyBranch           [33mRUNNING[0m -> [31mFAILURE[0m
+[krac_bt_runner-1] [1783649071.518]: EmergencyBranch           [31mFAILURE[0m -> [36mIDLE[0m
+[krac_bt_runner-1] [1783649071.618]: EmergencyBranch           [36mIDLE[0m -> [33mRUNNING[0m
+[krac_bt_runner-1] [1783649071.618]: IsEmergencyDetected       [36mIDLE[0m -> [31mFAILURE[0m
+[krac_bt_runner-1] [1783649071.618]: IsEmergencyDetected       [31mFAILURE[0m -> [36mIDLE[0m
+[krac_bt_runner-1] [1783649071.618]: EmergencyBranch           [33mRUNNING[0m -> [31mFAILURE[0m
+[krac_bt_runner-1] [1783649071.618]: EmergencyBranch           [31mFAILURE[0m -> [36mIDLE[0m
+[krac_bt_runner-1] [1783649071.718]: EmergencyBranch           [36mIDLE[0m -> [33mRUNNING[0m
+[krac_bt_runner-1] [1783649071.718]: IsEmergencyDetected       [36mIDLE[0m -> [31mFAILURE[0m
+[krac_bt_runner-1] [1783649071.718]: IsEmergencyDetected       [31mFAILURE[0m -> [36mIDLE[0m
+[krac_bt_runner-1] [1783649071.718]: EmergencyBranch           [33mRUNNING[0m -> [31mFAILURE[0m
+[krac_bt_runner-1] [1783649071.718]: EmergencyBranch           [31mFAILURE[0m -> [36mIDLE[0m
+[krac_bt_runner-1] [1783649071.818]: EmergencyBranch           [36mIDLE[0m -> [33mRUNNING[0m
+[krac_bt_runner-1] [1783649071.818]: IsEmergencyDetected       [36mIDLE[0m -> [31mFAILURE[0m
+[krac_bt_runner-1] [1783649071.818]: IsEmergencyDetected       [31mFAILURE[0m -> [36mIDLE[0m
+[krac_bt_runner-1] [1783649071.818]: EmergencyBranch           [33mRUNNING[0m -> [31mFAILURE[0m
+[krac_bt_runner-1] [1783649071.818]: EmergencyBranch           [31mFAILURE[0m -> [36mIDLE[0m
+[krac_bt_runner-1] [1783649071.918]: EmergencyBranch           [36mIDLE[0m -> [33mRUNNING[0m
+[krac_bt_runner-1] [1783649071.918]: IsEmergencyDetected       [36mIDLE[0m -> [31mFAILURE[0m
+[krac_bt_runner-1] [1783649071.918]: IsEmergencyDetected       [31mFAILURE[0m -> [36mIDLE[0m
+[krac_bt_runner-1] [1783649071.918]: EmergencyBranch           [33mRUNNING[0m -> [31mFAILURE[0m
+[krac_bt_runner-1] [1783649071.918]: EmergencyBranch           [31mFAILURE[0m -> [36mIDLE[0m
+[krac_bt_runner-1] [1783649072.018]: EmergencyBranch           [36mIDLE[0m -> [33mRUNNING[0m
+[krac_bt_runner-1] [1783649072.018]: IsEmergencyDetected       [36mIDLE[0m -> [31mFAILURE[0m
+[krac_bt_runner-1] [1783649072.018]: IsEmergencyDetected       [31mFAILURE[0m -> [36mIDLE[0m
+[krac_bt_runner-1] [1783649072.018]: EmergencyBranch           [33mRUNNING[0m -> [31mFAILURE[0m
+[krac_bt_runner-1] [1783649072.018]: EmergencyBranch           [31mFAILURE[0m -> [36mIDLE[0m
+[krac_bt_runner-1] [1783649072.118]: EmergencyBranch           [36mIDLE[0m -> [33mRUNNING[0m
+[krac_bt_runner-1] [1783649072.118]: IsEmergencyDetected       [36mIDLE[0m -> [31mFAILURE[0m
+[krac_bt_runner-1] [1783649072.118]: IsEmergencyDetected       [31mFAILURE[0m -> [36mIDLE[0m
+[krac_bt_runner-1] [1783649072.118]: EmergencyBranch           [33mRUNNING[0m -> [31mFAILURE[0m
+[krac_bt_runner-1] [1783649072.118]: EmergencyBranch           [31mFAILURE[0m -> [36mIDLE[0m
+[krac_bt_runner-1] [1783649072.218]: EmergencyBranch           [36mIDLE[0m -> [33mRUNNING[0m
+[krac_bt_runner-1] [1783649072.218]: IsEmergencyDetected       [36mIDLE[0m -> [31mFAILURE[0m
+[krac_bt_runner-1] [1783649072.218]: IsEmergencyDetected       [31mFAILURE[0m -> [36mIDLE[0m
+[krac_bt_runner-1] [1783649072.218]: EmergencyBranch           [33mRUNNING[0m -> [31mFAILURE[0m
+[krac_bt_runner-1] [WARN] [1783649072.218265768] [krac_bt_runner]: GlobalMissionRecovery active. policy=hold. Mission is held.
+[krac_bt_runner-1] [1783649072.218]: EmergencyBranch           [31mFAILURE[0m -> [36mIDLE[0m
+[krac_bt_runner-1] [1783649072.318]: EmergencyBranch           [36mIDLE[0m -> [33mRUNNING[0m
+[krac_bt_runner-1] [1783649072.318]: IsEmergencyDetected       [36mIDLE[0m -> [31mFAILURE[0m
+[krac_bt_runner-1] [1783649072.318]: IsEmergencyDetected       [31mFAILURE[0m -> [36mIDLE[0m
+[krac_bt_runner-1] [1783649072.318]: EmergencyBranch           [33mRUNNING[0m -> [31mFAILURE[0m
+[krac_bt_runner-1] [1783649072.318]: EmergencyBranch           [31mFAILURE[0m -> [36mIDLE[0m
+[krac_bt_runner-1] [1783649072.418]: EmergencyBranch           [36mIDLE[0m -> [33mRUNNING[0m
+[krac_bt_runner-1] [1783649072.418]: IsEmergencyDetected       [36mIDLE[0m -> [31mFAILURE[0m
+[krac_bt_runner-1] [1783649072.418]: IsEmergencyDetected       [31mFAILURE[0m -> [36mIDLE[0m
+[krac_bt_runner-1] [1783649072.418]: EmergencyBranch           [33mRUNNING[0m -> [31mFAILURE[0m
+[krac_bt_runner-1] [1783649072.418]: EmergencyBranch           [31mFAILURE[0m -> [36mIDLE[0m
+[krac_bt_runner-1] [1783649072.518]: EmergencyBranch           [36mIDLE[0m -> [33mRUNNING[0m
+[krac_bt_runner-1] [1783649072.518]: IsEmergencyDetected       [36mIDLE[0m -> [31mFAILURE[0m
+[krac_bt_runner-1] [1783649072.518]: IsEmergencyDetected       [31mFAILURE[0m -> [36mIDLE[0m
+[krac_bt_runner-1] [1783649072.518]: EmergencyBranch           [33mRUNNING[0m -> [31mFAILURE[0m
+[krac_bt_runner-1] [1783649072.518]: EmergencyBranch           [31mFAILURE[0m -> [36mIDLE[0m
+[krac_bt_runner-1] [1783649072.618]: EmergencyBranch           [36mIDLE[0m -> [33mRUNNING[0m
+[krac_bt_runner-1] [1783649072.618]: IsEmergencyDetected       [36mIDLE[0m -> [31mFAILURE[0m
+[krac_bt_runner-1] [1783649072.618]: IsEmergencyDetected       [31mFAILURE[0m -> [36mIDLE[0m
+[krac_bt_runner-1] [1783649072.618]: EmergencyBranch           [33mRUNNING[0m -> [31mFAILURE[0m
+[krac_bt_runner-1] [1783649072.618]: EmergencyBranch           [31mFAILURE[0m -> [36mIDLE[0m
+[krac_bt_runner-1] [1783649072.718]: EmergencyBranch           [36mIDLE[0m -> [33mRUNNING[0m
+[krac_bt_runner-1] [1783649072.718]: IsEmergencyDetected       [36mIDLE[0m -> [31mFAILURE[0m
+[krac_bt_runner-1] [1783649072.718]: IsEmergencyDetected       [31mFAILURE[0m -> [36mIDLE[0m
+[krac_bt_runner-1] [1783649072.718]: EmergencyBranch           [33mRUNNING[0m -> [31mFAILURE[0m
+[krac_bt_runner-1] [1783649072.718]: EmergencyBranch           [31mFAILURE[0m -> [36mIDLE[0m
+[krac_bt_runner-1] [1783649072.818]: EmergencyBranch           [36mIDLE[0m -> [33mRUNNING[0m
+[krac_bt_runner-1] [1783649072.818]: IsEmergencyDetected       [36mIDLE[0m -> [31mFAILURE[0m
+[krac_bt_runner-1] [1783649072.818]: IsEmergencyDetected       [31mFAILURE[0m -> [36mIDLE[0m
+[krac_bt_runner-1] [1783649072.818]: EmergencyBranch           [33mRUNNING[0m -> [31mFAILURE[0m
+[krac_bt_runner-1] [1783649072.818]: EmergencyBranch           [31mFAILURE[0m -> [36mIDLE[0m
+[krac_bt_runner-1] [1783649072.918]: EmergencyBranch           [36mIDLE[0m -> [33mRUNNING[0m
+[krac_bt_runner-1] [1783649072.918]: IsEmergencyDetected       [36mIDLE[0m -> [31mFAILURE[0m
+[krac_bt_runner-1] [1783649072.918]: IsEmergencyDetected       [31mFAILURE[0m -> [36mIDLE[0m
+[krac_bt_runner-1] [1783649072.918]: EmergencyBranch           [33mRUNNING[0m -> [31mFAILURE[0m
+[krac_bt_runner-1] [1783649072.918]: EmergencyBranch           [31mFAILURE[0m -> [36mIDLE[0m
+[krac_bt_runner-1] [1783649073.018]: EmergencyBranch           [36mIDLE[0m -> [33mRUNNING[0m
+[krac_bt_runner-1] [1783649073.018]: IsEmergencyDetected       [36mIDLE[0m -> [31mFAILURE[0m
+[krac_bt_runner-1] [1783649073.018]: IsEmergencyDetected       [31mFAILURE[0m -> [36mIDLE[0m
+[krac_bt_runner-1] [1783649073.018]: EmergencyBranch           [33mRUNNING[0m -> [31mFAILURE[0m
+[krac_bt_runner-1] [1783649073.018]: EmergencyBranch           [31mFAILURE[0m -> [36mIDLE[0m
+[WARNING] [launch]: user interrupted with ctrl-c (SIGINT)
+[krac_bt_runner-1] [INFO] [1783649073.049190601] [rclcpp]: signal_handler(SIGINT/SIGTERM)
+[krac_bt_runner-1] [1783649073.050]: SafetyGuardedControlTeamMission [31mFAILURE[0m -> [36mIDLE[0m
+[krac_bt_runner-1] [1783649073.050]: GlobalMissionRecovery     [33mRUNNING[0m -> [36mIDLE[0m
+[krac_bt_runner-1] [1783649073.050]: MissionOrRecovery         [33mRUNNING[0m -> [36mIDLE[0m
+[krac_bt_runner-1] [1783649073.050]: ControlTeamRoot           [33mRUNNING[0m -> [36mIDLE[0m
+[krac_bt_runner-1] [WARN] [1783649073.049949665] [krac_bt_runner]: GlobalMissionRecovery halted.
+[INFO] [krac_bt_runner-1]: process has finished cleanly [pid 48190]
+
+===== Mission Loader Tail =====
+==> /tmp/krac_ros_logs/control_team_20260710_110247/ros_logs/python3_47472_1783648975758.log <==
+
+==> /tmp/krac_ros_logs/control_team_20260710_110247/ros_logs/python3_48155_1783648988034.log <==
+
+==> /tmp/krac_ros_logs/control_team_20260710_110247/ros_logs/python3_48115_1783648986950.log <==
+
+==> /tmp/krac_ros_logs/control_team_20260710_110247/ros_logs/python3_46812_1783648969223.log <==
+[INFO] [1783648969.318326002] [gz_image_republisher]: Gazebo image republisher: /world/default/model/standard_vtol_0/link/camera_link/sensor/camera/image -> /image_raw @ 5.0 Hz
+
+==> /tmp/krac_ros_logs/control_team_20260710_110247/ros_logs/python3_47715_1783648980668.log <==
+
+==> /tmp/krac_ros_logs/control_team_20260710_110247/ros_logs/python3_47557_1783648978611.log <==
+
+==> /tmp/krac_ros_logs/control_team_20260710_110247/ros_logs/python3_46839_1783648970967.log <==
+[INFO] [1783648971.692301849] [yolo_detector_node]: YOLO loaded: model=/home/mudokim/workspace/hzy/krac-control-team-complete/ros2_ws/src/krac_vision/weights/best.pt, device=cpu, threshold=0.5, image_topic=/image_raw, initial_target=disabled
+[INFO] [1783648982.425558617] [yolo_detector_node]: Vision inference is OFF. Publish /camera/set_target = basket/all/... to enable.
+[INFO] [1783648985.031410914] [yolo_detector_node]: Vision inference is OFF. Publish /camera/set_target = basket/all/... to enable.
+[INFO] [1783648987.371177447] [yolo_detector_node]: Vision inference is OFF. Publish /camera/set_target = basket/all/... to enable.
+[INFO] [1783648989.803169230] [yolo_detector_node]: Vision inference is OFF. Publish /camera/set_target = basket/all/... to enable.
+[INFO] [1783648993.282048194] [yolo_detector_node]: Vision inference is OFF. Publish /camera/set_target = basket/all/... to enable.
+[INFO] [1783648995.651487826] [yolo_detector_node]: Vision inference is OFF. Publish /camera/set_target = basket/all/... to enable.
+[INFO] [1783649000.297851465] [yolo_detector_node]: Vision inference is OFF. Publish /camera/set_target = basket/all/... to enable.
+[INFO] [1783649002.667009881] [yolo_detector_node]: Vision inference is OFF. Publish /camera/set_target = basket/all/... to enable.
+[INFO] [1783649004.934726778] [yolo_detector_node]: Vision inference is OFF. Publish /camera/set_target = basket/all/... to enable.
+[INFO] [1783649007.195739005] [yolo_detector_node]: Vision inference is OFF. Publish /camera/set_target = basket/all/... to enable.
+[INFO] [1783649010.765167191] [yolo_detector_node]: Vision inference is OFF. Publish /camera/set_target = basket/all/... to enable.
+[INFO] [1783649013.224549842] [yolo_detector_node]: Vision inference is OFF. Publish /camera/set_target = basket/all/... to enable.
+[INFO] [1783649015.513900329] [yolo_detector_node]: Vision inference is OFF. Publish /camera/set_target = basket/all/... to enable.
+[INFO] [1783649017.873081618] [yolo_detector_node]: Vision inference is OFF. Publish /camera/set_target = basket/all/... to enable.
+[INFO] [1783649020.156080669] [yolo_detector_node]: Vision inference is OFF. Publish /camera/set_target = basket/all/... to enable.
+[INFO] [1783649022.470677655] [yolo_detector_node]: Vision inference is OFF. Publish /camera/set_target = basket/all/... to enable.
+[INFO] [1783649024.839542969] [yolo_detector_node]: Vision inference is OFF. Publish /camera/set_target = basket/all/... to enable.
+[INFO] [1783649027.125285198] [yolo_detector_node]: Vision inference is OFF. Publish /camera/set_target = basket/all/... to enable.
+[INFO] [1783649029.463750636] [yolo_detector_node]: Vision inference is OFF. Publish /camera/set_target = basket/all/... to enable.
+[INFO] [1783649031.834233719] [yolo_detector_node]: Vision inference is OFF. Publish /camera/set_target = basket/all/... to enable.
+[INFO] [1783649034.167911496] [yolo_detector_node]: Vision inference is OFF. Publish /camera/set_target = basket/all/... to enable.
+[INFO] [1783649036.508086263] [yolo_detector_node]: Vision inference is OFF. Publish /camera/set_target = basket/all/... to enable.
+[INFO] [1783649038.842621091] [yolo_detector_node]: Vision inference is OFF. Publish /camera/set_target = basket/all/... to enable.
+[INFO] [1783649041.168767754] [yolo_detector_node]: Vision inference is OFF. Publish /camera/set_target = basket/all/... to enable.
+[INFO] [1783649043.437746973] [yolo_detector_node]: Vision inference is OFF. Publish /camera/set_target = basket/all/... to enable.
+[INFO] [1783649045.799760460] [yolo_detector_node]: Vision inference is OFF. Publish /camera/set_target = basket/all/... to enable.
+[INFO] [1783649048.199060612] [yolo_detector_node]: Vision inference is OFF. Publish /camera/set_target = basket/all/... to enable.
+[INFO] [1783649050.631026087] [yolo_detector_node]: Vision inference is OFF. Publish /camera/set_target = basket/all/... to enable.
+[INFO] [1783649053.074145343] [yolo_detector_node]: Vision inference is OFF. Publish /camera/set_target = basket/all/... to enable.
+[INFO] [1783649055.484986017] [yolo_detector_node]: Vision inference is OFF. Publish /camera/set_target = basket/all/... to enable.
+[INFO] [1783649057.890896203] [yolo_detector_node]: Vision inference is OFF. Publish /camera/set_target = basket/all/... to enable.
+[INFO] [1783649060.249479903] [yolo_detector_node]: Vision inference is OFF. Publish /camera/set_target = basket/all/... to enable.
+[INFO] [1783649062.554083477] [yolo_detector_node]: Vision inference is OFF. Publish /camera/set_target = basket/all/... to enable.
+[INFO] [1783649064.842104972] [yolo_detector_node]: Vision inference is OFF. Publish /camera/set_target = basket/all/... to enable.
+[INFO] [1783649067.195264527] [yolo_detector_node]: Vision inference is OFF. Publish /camera/set_target = basket/all/... to enable.
+[INFO] [1783649069.592850320] [yolo_detector_node]: Vision inference is OFF. Publish /camera/set_target = basket/all/... to enable.
+
+==> /tmp/krac_ros_logs/control_team_20260710_110247/ros_logs/python3_48045_1783648984863.log <==
+
+==> /tmp/krac_ros_logs/control_team_20260710_110247/ros_logs/python3_46586_1783648968852.log <==
+
+==> /tmp/krac_ros_logs/control_team_20260710_110247/ros_logs/python3_48227_1783648991731.log <==
+[INFO] [1783648991.801366387] [mission_loader]: Loading mission plan: /home/mudokim/workspace/hzy/krac-control-team-complete/ros2_ws/install/krac_control/share/krac_control/mission/control_team_outbound.plan
+[INFO] [1783648991.801721534] [mission_loader]: Waiting for MAVROS services...
+[INFO] [1783648991.809672921] [mission_loader]: Old mission cleared.
+[INFO] [1783648992.810613857] [mission_loader]: Plan altitude check: first=10, last=10
+[INFO] [1783648992.810973473] [mission_loader]: Uploading 2 items from .plan file...
+[INFO] [1783648992.818464425] [mission_loader]: ✅ Mission Upload SUCCESS!
+
+==> /tmp/krac_ros_logs/control_team_20260710_110247/ros_logs/python3_46654_1783648969029.log <==
+
+==> /tmp/krac_ros_logs/control_team_20260710_110247/ros_logs/python3_47299_1783648973739.log <==
+
+==> /tmp/krac_ros_logs/control_team_20260710_110247/ros_logs/python3_46613_1783648969101.log <==
+[INFO] [1783649073.049202242] [rclcpp]: signal_handler(SIGINT/SIGTERM)
+
+==> /tmp/krac_ros_logs/control_team_20260710_110247/ros_logs/python3_47956_1783648982754.log <==
+
+==> /tmp/krac_ros_logs/control_team_20260710_110247/ros_logs/python3_47017_1783648970995.log <==
+
+==> /tmp/krac_ros_logs/control_team_20260710_110247/ros_logs/python3_46841_1783648970955.log <==
+[INFO] [1783648984.594143892] [vision_tracker_node]: tracking=LOST
+[INFO] [1783648986.179737534] [vision_tracker_node]: tracking=LOST
+[INFO] [1783648988.634196953] [vision_tracker_node]: tracking=LOST
+[INFO] [1783648989.813424397] [vision_tracker_node]: tracking=LOST
+[INFO] [1783648990.955910296] [vision_tracker_node]: tracking=LOST
+[INFO] [1783648993.293584880] [vision_tracker_node]: tracking=LOST
+[INFO] [1783648994.500223819] [vision_tracker_node]: tracking=LOST
+[INFO] [1783648995.663618098] [vision_tracker_node]: tracking=LOST
+[INFO] [1783648996.811517189] [vision_tracker_node]: tracking=LOST
+[INFO] [1783648999.138472778] [vision_tracker_node]: tracking=LOST
+[INFO] [1783649000.310147359] [vision_tracker_node]: tracking=LOST
+[INFO] [1783649001.502076583] [vision_tracker_node]: tracking=LOST
+[INFO] [1783649002.678318439] [vision_tracker_node]: tracking=LOST
+[INFO] [1783649003.804760752] [vision_tracker_node]: tracking=LOST
+[INFO] [1783649004.946433645] [vision_tracker_node]: tracking=LOST
+[INFO] [1783649006.053263981] [vision_tracker_node]: tracking=LOST
+[INFO] [1783649007.207288549] [vision_tracker_node]: tracking=LOST
+[INFO] [1783649008.376000265] [vision_tracker_node]: tracking=LOST
+[INFO] [1783649009.576573239] [vision_tracker_node]: tracking=LOST
+[INFO] [1783649010.778406986] [vision_tracker_node]: tracking=LOST
+[INFO] [1783649012.084312170] [vision_tracker_node]: tracking=LOST
+[INFO] [1783649013.234290321] [vision_tracker_node]: tracking=LOST
+[INFO] [1783649014.369218094] [vision_tracker_node]: tracking=LOST
+[INFO] [1783649015.525120735] [vision_tracker_node]: tracking=LOST
+[INFO] [1783649016.691277426] [vision_tracker_node]: tracking=LOST
+[INFO] [1783649017.885063353] [vision_tracker_node]: tracking=LOST
+[INFO] [1783649019.015248172] [vision_tracker_node]: tracking=LOST
+[INFO] [1783649020.164601570] [vision_tracker_node]: tracking=LOST
+[INFO] [1783649021.313682984] [vision_tracker_node]: tracking=LOST
+[INFO] [1783649022.482208324] [vision_tracker_node]: tracking=LOST
+[INFO] [1783649023.678925547] [vision_tracker_node]: tracking=LOST
+[INFO] [1783649024.851932139] [vision_tracker_node]: tracking=LOST
+[INFO] [1783649025.988004116] [vision_tracker_node]: tracking=LOST
+[INFO] [1783649027.134882408] [vision_tracker_node]: tracking=LOST
+[INFO] [1783649028.296069380] [vision_tracker_node]: tracking=LOST
+[INFO] [1783649029.476538746] [vision_tracker_node]: tracking=LOST
+[INFO] [1783649030.694985008] [vision_tracker_node]: tracking=LOST
+[INFO] [1783649031.848143814] [vision_tracker_node]: tracking=LOST
+[INFO] [1783649033.023123437] [vision_tracker_node]: tracking=LOST
+[INFO] [1783649034.176993841] [vision_tracker_node]: tracking=LOST
+[INFO] [1783649035.332992927] [vision_tracker_node]: tracking=LOST
+[INFO] [1783649038.854838821] [vision_tracker_node]: tracking=LOST
+[INFO] [1783649040.025901272] [vision_tracker_node]: tracking=LOST
+[INFO] [1783649041.181449484] [vision_tracker_node]: tracking=LOST
+[INFO] [1783649042.327461956] [vision_tracker_node]: tracking=LOST
+[INFO] [1783649043.447361657] [vision_tracker_node]: tracking=LOST
+[INFO] [1783649044.622035562] [vision_tracker_node]: tracking=LOST
+[INFO] [1783649045.812043512] [vision_tracker_node]: tracking=LOST
+[INFO] [1783649047.076288344] [vision_tracker_node]: tracking=LOST
+[INFO] [1783649048.211084528] [vision_tracker_node]: tracking=LOST
+[INFO] [1783649049.406786054] [vision_tracker_node]: tracking=LOST
+[INFO] [1783649050.641782084] [vision_tracker_node]: tracking=LOST
+[INFO] [1783649053.086330011] [vision_tracker_node]: tracking=LOST
+[INFO] [1783649054.310726540] [vision_tracker_node]: tracking=LOST
+[INFO] [1783649055.493700392] [vision_tracker_node]: tracking=LOST
+[INFO] [1783649056.712673645] [vision_tracker_node]: tracking=LOST
+[INFO] [1783649057.901327361] [vision_tracker_node]: tracking=LOST
+[INFO] [1783649059.095982437] [vision_tracker_node]: tracking=LOST
+[INFO] [1783649060.260142195] [vision_tracker_node]: tracking=LOST
+[INFO] [1783649061.380361841] [vision_tracker_node]: tracking=LOST
+[INFO] [1783649062.566181363] [vision_tracker_node]: tracking=LOST
+[INFO] [1783649064.855493551] [vision_tracker_node]: tracking=LOST
+[INFO] [1783649065.992121676] [vision_tracker_node]: tracking=LOST
+[INFO] [1783649067.207380327] [vision_tracker_node]: tracking=LOST
+[INFO] [1783649068.413716177] [vision_tracker_node]: tracking=LOST
+[INFO] [1783649069.602956638] [vision_tracker_node]: tracking=LOST
+[INFO] [1783649070.740681647] [vision_tracker_node]: tracking=LOST
+
+===== Vision Tail =====
+==> /tmp/krac_ros_logs/control_team_20260710_110247/vision_debug_viewer.log <==
+[INFO] [1783649073.049202242] [rclcpp]: signal_handler(SIGINT/SIGTERM)
+
+==> /tmp/krac_ros_logs/control_team_20260710_110247/ros_logs/precision_lander_46843_1783648969188.log <==
+[INFO] [1783648969.221743949] [precision_lander]: 🛬 정밀 착륙(Precision Lander) 가동! (0도/180도 최단거리 정렬 적용)
+[INFO] [1783649073.051036796] [rclcpp]: signal_handler(SIGINT/SIGTERM)
+
+==> /tmp/krac_ros_logs/control_team_20260710_110247/Gazebo_image_republisher.log <==
+[INFO] [1783648969.318326002] [gz_image_republisher]: Gazebo image republisher: /world/default/model/standard_vtol_0/link/camera_link/sensor/camera/image -> /image_raw @ 5.0 Hz
+Traceback (most recent call last):
+  File "/home/mudokim/workspace/hzy/krac-control-team-complete/ros2_ws/install/krac_vision/lib/krac_vision/gz_image_republisher", line 33, in <module>
+    sys.exit(load_entry_point('krac-vision', 'console_scripts', 'gz_image_republisher')())
+  File "/home/mudokim/workspace/hzy/krac-control-team-complete/ros2_ws/build/krac_vision/krac_vision/gz_image_republisher.py", line 122, in main
+    rclpy.shutdown()
+  File "/opt/ros/humble/local/lib/python3.10/dist-packages/rclpy/__init__.py", line 130, in shutdown
+    _shutdown(context=context)
+  File "/opt/ros/humble/local/lib/python3.10/dist-packages/rclpy/utilities.py", line 58, in shutdown
+    return context.shutdown()
+  File "/opt/ros/humble/local/lib/python3.10/dist-packages/rclpy/context.py", line 102, in shutdown
+    self.__context.shutdown()
+rclpy._rclpy_pybind11.RCLError: failed to shutdown: rcl_shutdown already called on the given context, at ./src/rcl/init.c:241
+[ros2run]: Process exited with failure 1
+
+==> /tmp/krac_ros_logs/control_team_20260710_110247/BT_vision_stack.log <==
+[vision_bt] model=/home/mudokim/workspace/hzy/krac-control-team-complete/ros2_ws/src/krac_vision/weights/best.pt image_topic=/image_raw initial_target=disabled obb_confidence=0.20 tracking_hold_sec=75.0 inference_interval_sec=0.25 start_yolo_detector=true
+[INFO] [launch]: All log files can be found below /tmp/krac_ros_logs/control_team_20260710_110247/ros_logs/2026-07-10-11-02-49-122689-mudokim-Legion-5-15AHP10-46692
+[INFO] [launch]: Default logging verbosity is set to INFO
+[INFO] [yolo_node-1]: process started with pid [46839]
+[INFO] [vision_tracker-2]: process started with pid [46841]
+[INFO] [precision_lander-3]: process started with pid [46843]
+[precision_lander-3] [INFO] [1783648969.221743949] [precision_lander]: 🛬 정밀 착륙(Precision Lander) 가동! (0도/180도 최단거리 정렬 적용)
+[vision_tracker-2] /home/mudokim/.local/lib/python3.10/site-packages/matplotlib/projections/__init__.py:63: UserWarning: Unable to import Axes3D. This may be due to multiple versions of Matplotlib being installed (e.g. as a system package and as a pip package). As a result, the 3D projection is not available.
+[vision_tracker-2]   warnings.warn("Unable to import Axes3D. This may be due to multiple versions of "
+[yolo_node-1] /home/mudokim/.local/lib/python3.10/site-packages/matplotlib/projections/__init__.py:63: UserWarning: Unable to import Axes3D. This may be due to multiple versions of Matplotlib being installed (e.g. as a system package and as a pip package). As a result, the 3D projection is not available.
+[yolo_node-1]   warnings.warn("Unable to import Axes3D. This may be due to multiple versions of "
+[yolo_node-1] [INFO] [1783648971.692301849] [yolo_detector_node]: YOLO loaded: model=/home/mudokim/workspace/hzy/krac-control-team-complete/ros2_ws/src/krac_vision/weights/best.pt, device=cpu, threshold=0.5, image_topic=/image_raw, initial_target=disabled
+[yolo_node-1] [INFO] [1783648982.425558617] [yolo_detector_node]: Vision inference is OFF. Publish /camera/set_target = basket/all/... to enable.
+[vision_tracker-2] [INFO] [1783648984.594143892] [vision_tracker_node]: tracking=LOST
+[yolo_node-1] [INFO] [1783648985.031410914] [yolo_detector_node]: Vision inference is OFF. Publish /camera/set_target = basket/all/... to enable.
+[vision_tracker-2] [INFO] [1783648986.179737534] [vision_tracker_node]: tracking=LOST
+[yolo_node-1] [INFO] [1783648987.371177447] [yolo_detector_node]: Vision inference is OFF. Publish /camera/set_target = basket/all/... to enable.
+[vision_tracker-2] [INFO] [1783648988.634196953] [vision_tracker_node]: tracking=LOST
+[yolo_node-1] [INFO] [1783648989.803169230] [yolo_detector_node]: Vision inference is OFF. Publish /camera/set_target = basket/all/... to enable.
+[vision_tracker-2] [INFO] [1783648989.813424397] [vision_tracker_node]: tracking=LOST
+[vision_tracker-2] [INFO] [1783648990.955910296] [vision_tracker_node]: tracking=LOST
+[yolo_node-1] [INFO] [1783648993.282048194] [yolo_detector_node]: Vision inference is OFF. Publish /camera/set_target = basket/all/... to enable.
+[vision_tracker-2] [INFO] [1783648993.293584880] [vision_tracker_node]: tracking=LOST
+[vision_tracker-2] [INFO] [1783648994.500223819] [vision_tracker_node]: tracking=LOST
+[yolo_node-1] [INFO] [1783648995.651487826] [yolo_detector_node]: Vision inference is OFF. Publish /camera/set_target = basket/all/... to enable.
+[vision_tracker-2] [INFO] [1783648995.663618098] [vision_tracker_node]: tracking=LOST
+[vision_tracker-2] [INFO] [1783648996.811517189] [vision_tracker_node]: tracking=LOST
+[vision_tracker-2] [INFO] [1783648999.138472778] [vision_tracker_node]: tracking=LOST
+[yolo_node-1] [INFO] [1783649000.297851465] [yolo_detector_node]: Vision inference is OFF. Publish /camera/set_target = basket/all/... to enable.
+[vision_tracker-2] [INFO] [1783649000.310147359] [vision_tracker_node]: tracking=LOST
+[vision_tracker-2] [INFO] [1783649001.502076583] [vision_tracker_node]: tracking=LOST
+[yolo_node-1] [INFO] [1783649002.667009881] [yolo_detector_node]: Vision inference is OFF. Publish /camera/set_target = basket/all/... to enable.
+[vision_tracker-2] [INFO] [1783649002.678318439] [vision_tracker_node]: tracking=LOST
+[vision_tracker-2] [INFO] [1783649003.804760752] [vision_tracker_node]: tracking=LOST
+[yolo_node-1] [INFO] [1783649004.934726778] [yolo_detector_node]: Vision inference is OFF. Publish /camera/set_target = basket/all/... to enable.
+[vision_tracker-2] [INFO] [1783649004.946433645] [vision_tracker_node]: tracking=LOST
+[vision_tracker-2] [INFO] [1783649006.053263981] [vision_tracker_node]: tracking=LOST
+[yolo_node-1] [INFO] [1783649007.195739005] [yolo_detector_node]: Vision inference is OFF. Publish /camera/set_target = basket/all/... to enable.
+[vision_tracker-2] [INFO] [1783649007.207288549] [vision_tracker_node]: tracking=LOST
+[vision_tracker-2] [INFO] [1783649008.376000265] [vision_tracker_node]: tracking=LOST
+[vision_tracker-2] [INFO] [1783649009.576573239] [vision_tracker_node]: tracking=LOST
+[yolo_node-1] [INFO] [1783649010.765167191] [yolo_detector_node]: Vision inference is OFF. Publish /camera/set_target = basket/all/... to enable.
+[vision_tracker-2] [INFO] [1783649010.778406986] [vision_tracker_node]: tracking=LOST
+[vision_tracker-2] [INFO] [1783649012.084312170] [vision_tracker_node]: tracking=LOST
+[yolo_node-1] [INFO] [1783649013.224549842] [yolo_detector_node]: Vision inference is OFF. Publish /camera/set_target = basket/all/... to enable.
+[vision_tracker-2] [INFO] [1783649013.234290321] [vision_tracker_node]: tracking=LOST
+[vision_tracker-2] [INFO] [1783649014.369218094] [vision_tracker_node]: tracking=LOST
+[yolo_node-1] [INFO] [1783649015.513900329] [yolo_detector_node]: Vision inference is OFF. Publish /camera/set_target = basket/all/... to enable.
+[vision_tracker-2] [INFO] [1783649015.525120735] [vision_tracker_node]: tracking=LOST
+[vision_tracker-2] [INFO] [1783649016.691277426] [vision_tracker_node]: tracking=LOST
+[yolo_node-1] [INFO] [1783649017.873081618] [yolo_detector_node]: Vision inference is OFF. Publish /camera/set_target = basket/all/... to enable.
+[vision_tracker-2] [INFO] [1783649017.885063353] [vision_tracker_node]: tracking=LOST
+[vision_tracker-2] [INFO] [1783649019.015248172] [vision_tracker_node]: tracking=LOST
+[yolo_node-1] [INFO] [1783649020.156080669] [yolo_detector_node]: Vision inference is OFF. Publish /camera/set_target = basket/all/... to enable.
+[vision_tracker-2] [INFO] [1783649020.164601570] [vision_tracker_node]: tracking=LOST
+[vision_tracker-2] [INFO] [1783649021.313682984] [vision_tracker_node]: tracking=LOST
+[yolo_node-1] [INFO] [1783649022.470677655] [yolo_detector_node]: Vision inference is OFF. Publish /camera/set_target = basket/all/... to enable.
+[vision_tracker-2] [INFO] [1783649022.482208324] [vision_tracker_node]: tracking=LOST
+[vision_tracker-2] [INFO] [1783649023.678925547] [vision_tracker_node]: tracking=LOST
+[yolo_node-1] [INFO] [1783649024.839542969] [yolo_detector_node]: Vision inference is OFF. Publish /camera/set_target = basket/all/... to enable.
+[vision_tracker-2] [INFO] [1783649024.851932139] [vision_tracker_node]: tracking=LOST
+[vision_tracker-2] [INFO] [1783649025.988004116] [vision_tracker_node]: tracking=LOST
+[yolo_node-1] [INFO] [1783649027.125285198] [yolo_detector_node]: Vision inference is OFF. Publish /camera/set_target = basket/all/... to enable.
+[vision_tracker-2] [INFO] [1783649027.134882408] [vision_tracker_node]: tracking=LOST
+[vision_tracker-2] [INFO] [1783649028.296069380] [vision_tracker_node]: tracking=LOST
+[yolo_node-1] [INFO] [1783649029.463750636] [yolo_detector_node]: Vision inference is OFF. Publish /camera/set_target = basket/all/... to enable.
+[vision_tracker-2] [INFO] [1783649029.476538746] [vision_tracker_node]: tracking=LOST
+[vision_tracker-2] [INFO] [1783649030.694985008] [vision_tracker_node]: tracking=LOST
+[yolo_node-1] [INFO] [1783649031.834233719] [yolo_detector_node]: Vision inference is OFF. Publish /camera/set_target = basket/all/... to enable.
+[vision_tracker-2] [INFO] [1783649031.848143814] [vision_tracker_node]: tracking=LOST
+[vision_tracker-2] [INFO] [1783649033.023123437] [vision_tracker_node]: tracking=LOST
+[yolo_node-1] [INFO] [1783649034.167911496] [yolo_detector_node]: Vision inference is OFF. Publish /camera/set_target = basket/all/... to enable.
+[vision_tracker-2] [INFO] [1783649034.176993841] [vision_tracker_node]: tracking=LOST
+[vision_tracker-2] [INFO] [1783649035.332992927] [vision_tracker_node]: tracking=LOST
+[yolo_node-1] [INFO] [1783649036.508086263] [yolo_detector_node]: Vision inference is OFF. Publish /camera/set_target = basket/all/... to enable.
+[yolo_node-1] [INFO] [1783649038.842621091] [yolo_detector_node]: Vision inference is OFF. Publish /camera/set_target = basket/all/... to enable.
+[vision_tracker-2] [INFO] [1783649038.854838821] [vision_tracker_node]: tracking=LOST
+[vision_tracker-2] [INFO] [1783649040.025901272] [vision_tracker_node]: tracking=LOST
+[yolo_node-1] [INFO] [1783649041.168767754] [yolo_detector_node]: Vision inference is OFF. Publish /camera/set_target = basket/all/... to enable.
+[vision_tracker-2] [INFO] [1783649041.181449484] [vision_tracker_node]: tracking=LOST
+[vision_tracker-2] [INFO] [1783649042.327461956] [vision_tracker_node]: tracking=LOST
+[yolo_node-1] [INFO] [1783649043.437746973] [yolo_detector_node]: Vision inference is OFF. Publish /camera/set_target = basket/all/... to enable.
+[vision_tracker-2] [INFO] [1783649043.447361657] [vision_tracker_node]: tracking=LOST
+[vision_tracker-2] [INFO] [1783649044.622035562] [vision_tracker_node]: tracking=LOST
+[yolo_node-1] [INFO] [1783649045.799760460] [yolo_detector_node]: Vision inference is OFF. Publish /camera/set_target = basket/all/... to enable.
+[vision_tracker-2] [INFO] [1783649045.812043512] [vision_tracker_node]: tracking=LOST
+[vision_tracker-2] [INFO] [1783649047.076288344] [vision_tracker_node]: tracking=LOST
+[yolo_node-1] [INFO] [1783649048.199060612] [yolo_detector_node]: Vision inference is OFF. Publish /camera/set_target = basket/all/... to enable.
+[vision_tracker-2] [INFO] [1783649048.211084528] [vision_tracker_node]: tracking=LOST
+[vision_tracker-2] [INFO] [1783649049.406786054] [vision_tracker_node]: tracking=LOST
+[yolo_node-1] [INFO] [1783649050.631026087] [yolo_detector_node]: Vision inference is OFF. Publish /camera/set_target = basket/all/... to enable.
+[vision_tracker-2] [INFO] [1783649050.641782084] [vision_tracker_node]: tracking=LOST
+[yolo_node-1] [INFO] [1783649053.074145343] [yolo_detector_node]: Vision inference is OFF. Publish /camera/set_target = basket/all/... to enable.
+[vision_tracker-2] [INFO] [1783649053.086330011] [vision_tracker_node]: tracking=LOST
+[vision_tracker-2] [INFO] [1783649054.310726540] [vision_tracker_node]: tracking=LOST
+[yolo_node-1] [INFO] [1783649055.484986017] [yolo_detector_node]: Vision inference is OFF. Publish /camera/set_target = basket/all/... to enable.
+[vision_tracker-2] [INFO] [1783649055.493700392] [vision_tracker_node]: tracking=LOST
+[vision_tracker-2] [INFO] [1783649056.712673645] [vision_tracker_node]: tracking=LOST
+[yolo_node-1] [INFO] [1783649057.890896203] [yolo_detector_node]: Vision inference is OFF. Publish /camera/set_target = basket/all/... to enable.
+[vision_tracker-2] [INFO] [1783649057.901327361] [vision_tracker_node]: tracking=LOST
+[vision_tracker-2] [INFO] [1783649059.095982437] [vision_tracker_node]: tracking=LOST
+[yolo_node-1] [INFO] [1783649060.249479903] [yolo_detector_node]: Vision inference is OFF. Publish /camera/set_target = basket/all/... to enable.
+[vision_tracker-2] [INFO] [1783649060.260142195] [vision_tracker_node]: tracking=LOST
+[vision_tracker-2] [INFO] [1783649061.380361841] [vision_tracker_node]: tracking=LOST
+[yolo_node-1] [INFO] [1783649062.554083477] [yolo_detector_node]: Vision inference is OFF. Publish /camera/set_target = basket/all/... to enable.
+[vision_tracker-2] [INFO] [1783649062.566181363] [vision_tracker_node]: tracking=LOST
+[yolo_node-1] [INFO] [1783649064.842104972] [yolo_detector_node]: Vision inference is OFF. Publish /camera/set_target = basket/all/... to enable.
+[vision_tracker-2] [INFO] [1783649064.855493551] [vision_tracker_node]: tracking=LOST
+[vision_tracker-2] [INFO] [1783649065.992121676] [vision_tracker_node]: tracking=LOST
+[yolo_node-1] [INFO] [1783649067.195264527] [yolo_detector_node]: Vision inference is OFF. Publish /camera/set_target = basket/all/... to enable.
+[vision_tracker-2] [INFO] [1783649067.207380327] [vision_tracker_node]: tracking=LOST
+[vision_tracker-2] [INFO] [1783649068.413716177] [vision_tracker_node]: tracking=LOST
+[yolo_node-1] [INFO] [1783649069.592850320] [yolo_detector_node]: Vision inference is OFF. Publish /camera/set_target = basket/all/... to enable.
+[vision_tracker-2] [INFO] [1783649069.602956638] [vision_tracker_node]: tracking=LOST
+[vision_tracker-2] [INFO] [1783649070.740681647] [vision_tracker_node]: tracking=LOST
+[yolo_node-1] [INFO] [1783649071.895439741] [yolo_detector_node]: Vision inference is OFF. Publish /camera/set_target = basket/all/... to enable.
+[vision_tracker-2] [INFO] [1783649071.908428539] [vision_tracker_node]: tracking=LOST
+[vision_tracker-2] [INFO] [1783649073.011369374] [vision_tracker_node]: tracking=LOST
+[precision_lander-3] [INFO] [1783649073.051036796] [rclcpp]: signal_handler(SIGINT/SIGTERM)
+[vision_tracker-2] Traceback (most recent call last):
+[vision_tracker-2]   File "/home/mudokim/workspace/hzy/krac-control-team-complete/ros2_ws/install/krac_vision/lib/krac_vision/vision_tracker", line 33, in <module>
+[vision_tracker-2]     sys.exit(load_entry_point('krac-vision', 'console_scripts', 'vision_tracker')())
+[vision_tracker-2]   File "/home/mudokim/workspace/hzy/krac-control-team-complete/ros2_ws/build/krac_vision/krac_vision/vision_tracker.py", line 283, in main
+[vision_tracker-2]     rclpy.spin(node)
+[vision_tracker-2]   File "/opt/ros/humble/local/lib/python3.10/dist-packages/rclpy/__init__.py", line 229, in spin
+[vision_tracker-2]     executor.spin_once()
+[vision_tracker-2]   File "/opt/ros/humble/local/lib/python3.10/dist-packages/rclpy/executors.py", line 808, in spin_once
+[vision_tracker-2]     self._spin_once_impl(timeout_sec)
+[vision_tracker-2]   File "/opt/ros/humble/local/lib/python3.10/dist-packages/rclpy/executors.py", line 797, in _spin_once_impl
+[vision_tracker-2]     handler, entity, node = self.wait_for_ready_callbacks(timeout_sec=timeout_sec)
+[vision_tracker-2]   File "/opt/ros/humble/local/lib/python3.10/dist-packages/rclpy/executors.py", line 780, in wait_for_ready_callbacks
+[vision_tracker-2]     return next(self._cb_iter)
+[vision_tracker-2]   File "/opt/ros/humble/local/lib/python3.10/dist-packages/rclpy/executors.py", line 681, in _wait_for_ready_callbacks
+[vision_tracker-2]     raise ExternalShutdownException()
+[vision_tracker-2] rclpy.executors.ExternalShutdownException
+[yolo_node-1] Traceback (most recent call last):
+[yolo_node-1]   File "/home/mudokim/workspace/hzy/krac-control-team-complete/ros2_ws/build/krac_vision/krac_vision/yolo_detector.py", line 278, in main
+[yolo_node-1]     rclpy.spin(node)
+[yolo_node-1]   File "/opt/ros/humble/local/lib/python3.10/dist-packages/rclpy/__init__.py", line 229, in spin
+[yolo_node-1]     executor.spin_once()
+[yolo_node-1]   File "/opt/ros/humble/local/lib/python3.10/dist-packages/rclpy/executors.py", line 808, in spin_once
+[yolo_node-1]     self._spin_once_impl(timeout_sec)
+[yolo_node-1]   File "/opt/ros/humble/local/lib/python3.10/dist-packages/rclpy/executors.py", line 797, in _spin_once_impl
+[yolo_node-1]     handler, entity, node = self.wait_for_ready_callbacks(timeout_sec=timeout_sec)
+[yolo_node-1]   File "/opt/ros/humble/local/lib/python3.10/dist-packages/rclpy/executors.py", line 780, in wait_for_ready_callbacks
+[yolo_node-1]     return next(self._cb_iter)
+[yolo_node-1]   File "/opt/ros/humble/local/lib/python3.10/dist-packages/rclpy/executors.py", line 681, in _wait_for_ready_callbacks
+[yolo_node-1]     raise ExternalShutdownException()
+[yolo_node-1] rclpy.executors.ExternalShutdownException
+[yolo_node-1] 
+[yolo_node-1] During handling of the above exception, another exception occurred:
+[yolo_node-1] 
+[yolo_node-1] Traceback (most recent call last):
+[yolo_node-1]   File "/home/mudokim/workspace/hzy/krac-control-team-complete/ros2_ws/install/krac_vision/lib/krac_vision/yolo_node", line 33, in <module>
+[yolo_node-1]     sys.exit(load_entry_point('krac-vision', 'console_scripts', 'yolo_node')())
+[yolo_node-1]   File "/home/mudokim/workspace/hzy/krac-control-team-complete/ros2_ws/build/krac_vision/krac_vision/yolo_detector.py", line 283, in main
+[yolo_node-1]     rclpy.shutdown()
+[yolo_node-1]   File "/opt/ros/humble/local/lib/python3.10/dist-packages/rclpy/__init__.py", line 130, in shutdown
+[yolo_node-1]     _shutdown(context=context)
+[yolo_node-1]   File "/opt/ros/humble/local/lib/python3.10/dist-packages/rclpy/utilities.py", line 58, in shutdown
+[yolo_node-1]     return context.shutdown()
+[yolo_node-1]   File "/opt/ros/humble/local/lib/python3.10/dist-packages/rclpy/context.py", line 102, in shutdown
+[yolo_node-1]     self.__context.shutdown()
+[yolo_node-1] rclpy._rclpy_pybind11.RCLError: failed to shutdown: rcl_shutdown already called on the given context, at ./src/rcl/init.c:241
+[INFO] [precision_lander-3]: process has finished cleanly [pid 46843]
+
+===== Live /mavros/state =====
+WARNING: topic [/mavros/state] does not appear to be published yet
+Could not determine the type for the passed topic
+
+===== Live /mavros/extended_state =====
+WARNING: topic [/mavros/extended_state] does not appear to be published yet
+Could not determine the type for the passed topic
+
+===== Live /mavros/global_position/rel_alt =====
+WARNING: topic [/mavros/global_position/rel_alt] does not appear to be published yet
+Could not determine the type for the passed topic
+
+===== Live /mavros/mission/reached =====
+WARNING: topic [/mavros/mission/reached] does not appear to be published yet
+Could not determine the type for the passed topic
+
+===== Live /mavros/mission/waypoints =====
+WARNING: topic [/mavros/mission/waypoints] does not appear to be published yet
+Could not determine the type for the passed topic
+
+===== Live /vision/target_error =====
+WARNING: topic [/vision/target_error] does not appear to be published yet
+Could not determine the type for the passed topic
+
+===== Hz /image_raw =====
+WARNING: topic [/image_raw] does not appear to be published yet
+
+===== Hz /vision/target_error =====
+WARNING: topic [/vision/target_error] does not appear to be published yet
+
+===== Hz /precision_lander/cmd_vel =====
+WARNING: topic [/precision_lander/cmd_vel] does not appear to be published yet

@@ -1,0 +1,12 @@
+$ for p in krac_interfaces krac_control krac_mission krac_utils mavros; do echo "===== $p ====="; ros2 pkg prefix "$p" 2>&1 || true; done
+
+===== krac_interfaces =====
+/home/mudokim/workspace/hzy/krac-control-team-complete/ros2_ws/install/krac_interfaces
+===== krac_control =====
+/home/mudokim/workspace/hzy/krac-control-team-complete/ros2_ws/install/krac_control
+===== krac_mission =====
+/home/mudokim/workspace/hzy/krac-control-team-complete/ros2_ws/install/krac_mission
+===== krac_utils =====
+/home/mudokim/workspace/hzy/krac-control-team-complete/ros2_ws/install/krac_utils
+===== mavros =====
+/opt/ros/humble

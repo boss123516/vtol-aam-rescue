@@ -1,0 +1,16 @@
+krac_bt_runner:
+  ros__parameters:
+    bt_xml_path: "/home/mudokim/workspace/hzy/krac-control-team-complete/ros2_ws/src/krac_control/bt/krac_control_team_cycle_bt.xml"
+    tick_rate_hz: 10.0
+    max_ticks: 0
+    print_bt_transitions: true
+    mavros_ns: "/mavros"
+    mission_dir: "/home/mudokim/workspace/hzy/krac-control-team-complete/ros2_ws/src/krac_control/src"
+    sim_bypass: true
+    mission_upload_stub_success: false
+    gripper_stub_success: false
+    rep_point: [47.39768885772897, 8.545818292055744, 10.0]
+    home_point: [47.397971057728974, 8.546163739800146, 0.0]
+    align_p_gain: 0.005
+    max_align_speed: 0.5
+    descend_speed: 0.25

@@ -1,0 +1,4 @@
+$ ros2 topic echo /mavros/global_position/rel_alt --once
+
+WARNING: topic [/mavros/global_position/rel_alt] does not appear to be published yet
+Could not determine the type for the passed topic

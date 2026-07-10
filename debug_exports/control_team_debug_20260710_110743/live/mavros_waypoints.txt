@@ -1,0 +1,4 @@
+$ ros2 topic echo /mavros/mission/waypoints --once
+
+WARNING: topic [/mavros/mission/waypoints] does not appear to be published yet
+Could not determine the type for the passed topic

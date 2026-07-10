@@ -1,0 +1,4 @@
+$ ros2 topic echo /mavros/global_position/rel_alt --once
+
+data: -0.026
+---

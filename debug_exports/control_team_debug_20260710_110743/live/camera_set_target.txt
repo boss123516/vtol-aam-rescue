@@ -1,0 +1,4 @@
+$ ros2 topic echo /camera/set_target --once
+
+WARNING: topic [/camera/set_target] does not appear to be published yet
+Could not determine the type for the passed topic

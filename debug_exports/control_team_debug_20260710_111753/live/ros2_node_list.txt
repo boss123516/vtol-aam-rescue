@@ -1,0 +1,25 @@
+$ ros2 node list
+
+/gz_image_republisher
+/krac24_offboard_bt_adapter
+/krac_bt_runner
+/mavros/cmd
+/mavros/global_position
+/mavros/imu
+/mavros/local_position
+/mavros/mavros
+/mavros/mavros_node
+/mavros/mavros_router
+/mavros/mission
+/mavros/param
+/mavros/setpoint_accel
+/mavros/setpoint_position
+/mavros/setpoint_raw
+/mavros/setpoint_velocity
+/mavros/sys
+/mavros/transform_listener_impl_5d17a9b178e0
+/precision_lander
+/ros_gz_bridge
+/rqt_gui_cpp_node_52790
+/vision_tracker_node
+/yolo_detector_node

@@ -1,0 +1,4 @@
+$ ros2 topic echo /krac/rescue_module/ready --once
+
+WARNING: topic [/krac/rescue_module/ready] does not appear to be published yet
+Could not determine the type for the passed topic

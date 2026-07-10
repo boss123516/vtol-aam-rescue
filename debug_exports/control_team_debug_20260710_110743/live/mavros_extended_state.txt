@@ -1,0 +1,4 @@
+$ ros2 topic echo /mavros/extended_state --once
+
+WARNING: topic [/mavros/extended_state] does not appear to be published yet
+Could not determine the type for the passed topic

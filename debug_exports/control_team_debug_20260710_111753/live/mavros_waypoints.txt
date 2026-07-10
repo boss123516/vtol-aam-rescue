@@ -1,0 +1,27 @@
+$ ros2 topic echo /mavros/mission/waypoints --once
+
+current_seq: 0
+waypoints:
+- frame: 6
+  command: 84
+  is_current: true
+  autocontinue: true
+  param1: 0.0
+  param2: 0.0
+  param3: 0.0
+  param4: 0.0
+  x_lat: 47.397971
+  y_long: 8.5461637
+  z_alt: 10.0
+- frame: 6
+  command: 16
+  is_current: false
+  autocontinue: false
+  param1: 0.0
+  param2: 0.0
+  param3: 0.0
+  param4: 0.0
+  x_lat: 47.3976888
+  y_long: 8.5458182
+  z_alt: 10.0
+---

@@ -1,0 +1,79 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  CONTROL TEAM STANDALONE TEST BT
+
+  HOME 이륙 -> 구조지점 직행 -> 외부 제어팀 구조 모듈
+  -> 재이륙 완료 -> HOME 직행 -> 최종 착륙
+
+  제어팀 반복 수정 파일:
+    ros2_ws/src/krac_control/src/rescue_controller_team.py
+-->
+<root BTCPP_format="4" main_tree_to_execute="CONTROL_TEAM_CYCLE_BT">
+  <BehaviorTree ID="CONTROL_TEAM_CYCLE_BT">
+    <ReactiveFallback name="ControlTeamRoot">
+      <Sequence name="EmergencyBranch">
+        <IsEmergencyDetected sources="px4_failsafe,mavros_loss,gps_loss,battery_critical,manual_abort,geofence"/>
+        <EmergencyRecovery policy="hold_if_possible_else_px4_failsafe"/>
+      </Sequence>
+      <Fallback name="MissionOrRecovery">
+        <ReactiveSequence name="SafetyGuardedControlTeamMission">
+          <Sequence name="SafetyGuard">
+            <IsMAVROSConnected max_state_age_sec="5.0"/>
+            <IsBatterySafe sim_bypass="true" min_voltage="0.0" min_percentage="0.0"/>
+          </Sequence>
+          <Sequence name="ControlTeamShortCycle">
+            <ClearMissionPlan optional="true"/>
+            <RetryUntilSuccessful num_attempts="2">
+              <Sequence name="UploadControlTeamOutbound">
+                <UploadMissionPlan plan_path="control_team_outbound.plan" mission_name="control_team_outbound" expected_end="RESCUE"/>
+                <IsMissionUploaded mission_name="control_team_outbound" expected_end="RESCUE"/>
+              </Sequence>
+            </RetryUntilSuccessful>
+            <RetryUntilSuccessful num_attempts="3">
+              <ArmVehicle arm="true" timeout_sec="8.0"/>
+            </RetryUntilSuccessful>
+            <RetryUntilSuccessful num_attempts="3">
+              <SetFlightMode mode="AUTO.MISSION" timeout_sec="8.0"/>
+            </RetryUntilSuccessful>
+            <WaitForWaypointReached seq="1" match="after_start" timeout_sec="240.0"/>
+            <Sequence name="TakeOverAtRescueSite">
+              <StartOffboardSetpointStream mode="hold_current_pose" rate_hz="20"/>
+              <Delay delay_msec="1500"><AlwaysSuccess/></Delay>
+              <IsOffboardSetpointStreamAlive min_rate_hz="10" stable_duration_sec="1.0"/>
+              <RetryUntilSuccessful num_attempts="3">
+                <SetFlightMode mode="OFFBOARD" timeout_sec="8.0"/>
+              </RetryUntilSuccessful>
+              <ClearMissionPlan optional="true"/>
+            </Sequence>
+            <SubTree ID="RescuePickupModule"/>
+            <RetryUntilSuccessful num_attempts="2">
+              <Sequence name="UploadControlTeamReturn">
+                <ClearMissionPlan optional="true"/>
+                <UploadMissionPlan plan_path="control_team_return.plan" mission_name="control_team_return" expected_end="HOME_LAND"/>
+                <IsMissionUploaded mission_name="control_team_return" expected_end="HOME_LAND"/>
+              </Sequence>
+            </RetryUntilSuccessful>
+            <RetryUntilSuccessful num_attempts="3">
+              <SetFlightMode mode="AUTO.MISSION" timeout_sec="8.0"/>
+            </RetryUntilSuccessful>
+            <WaitForWaypointReached seq="1" match="after_start" timeout_sec="300.0"/>
+            <DetectLanding max_relative_altitude_m="0.4" max_vertical_speed_mps="0.3" timeout_sec="180.0"/>
+            <Fallback name="FinalDisarmOrAlreadyDisarmed">
+              <Inverter><IsVehicleArmed/></Inverter>
+              <ArmVehicle arm="false" timeout_sec="10.0"/>
+            </Fallback>
+          </Sequence>
+        </ReactiveSequence>
+        <GlobalMissionRecovery reason="control_team_short_cycle_failure"/>
+      </Fallback>
+    </ReactiveFallback>
+  </BehaviorTree>
+  <BehaviorTree ID="RescuePickupModule">
+    <Sequence name="SharedControlTeamRescueModule">
+      <CommandVTOLTransition target_state="MC" timeout_sec="20.0"/>
+      <FlyToLocalPoint x_m="-26.03" y_m="-31.41" z_m="3.0" xy_tolerance_m="0.5" z_tolerance_m="0.45" max_xy_speed_mps="1.2" max_z_speed_mps="0.7" timeout_sec="60.0"/>
+      <WaitForHoverStable altitude_tolerance_m="0.7" max_vertical_speed_mps="0.3" max_horizontal_speed_mps="0.5" stable_duration_sec="1.5" timeout_sec="20.0"/>
+      <ExecuteExternalRescueModule enable_topic="/krac/rescue_module/enable" ready_topic="/krac/rescue_module/ready" result_topic="/krac/rescue_module/result" request_rate_hz="2.0" handover_timeout_sec="30.0" execution_timeout_sec="300.0" handback_hold_sec="1.0"/>
+    </Sequence>
+  </BehaviorTree>
+</root>

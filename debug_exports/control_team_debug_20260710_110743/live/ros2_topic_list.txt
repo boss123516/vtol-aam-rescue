@@ -1,0 +1,4 @@
+$ ros2 topic list
+
+/parameter_events
+/rosout

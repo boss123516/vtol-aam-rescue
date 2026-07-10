@@ -1,0 +1,38 @@
+krac24_offboard_bt_adapter:
+  ros__parameters:
+    enable_topic: "/krac/rescue_module/enable"
+    ready_topic: "/krac/rescue_module/ready"
+    result_topic: "/krac/rescue_module/result"
+
+    vision_error_topic: "/camera/target_error"
+    target_label_topic: "/camera/set_target"
+    velocity_topic: "/mavros/setpoint_velocity/cmd_vel_unstamped"
+    target_label: "basket"
+
+    control_rate_hz: 20.0
+    handover_prestream_sec: 1.0
+    vision_fresh_sec: 0.5
+
+    # Values preserved from krac24/src/krac_control/src/offboard.cpp.
+    vision_p_gain: 0.005
+    max_align_speed_mps: 0.5
+    descend_speed_mps: -0.3
+    search_speed_mps: 0.2
+    search_altitude_m: 3.0
+    minimum_hover_altitude_m: 1.5
+    hover_step_m: 1.0
+    center_tolerance_px: 30.0
+    descent_hold_error_px: 100.0
+
+    # 3 s permits a full unattended SITL test after centering.
+    # Set to -1.0 to require:
+    # ros2 service call /cmd/mission_proceed std_srvs/srv/Trigger "{}"
+    auto_proceed_after_hover_sec: 3.0
+
+    ascend_speed_mps: 0.5
+    ascend_target_altitude_m: 5.0
+    ascend_stable_sec: 1.0
+    max_stable_vertical_speed_mps: 0.35
+
+    execution_timeout_sec: 240.0
+    offboard_retry_sec: 1.0

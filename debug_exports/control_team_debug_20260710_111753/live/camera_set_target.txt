@@ -1,0 +1,2 @@
+$ ros2 topic echo /camera/set_target --once
+

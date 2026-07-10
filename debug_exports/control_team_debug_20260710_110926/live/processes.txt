@@ -1,0 +1,3 @@
+$ ps aux | grep -E "px4|gz sim|mavros|krac_bt_runner|rescue_offboard_bt_controller|rescue_controller_team|vision|image|qground|groot" | grep -v grep
+
+mudokim    49520  0.0  0.0   9720  2100 pts/0    S+   11:04   0:00 tail -f /tmp/krac_ros_logs/control_team_20260710_110247/rescue_offboard_bt_controller.log

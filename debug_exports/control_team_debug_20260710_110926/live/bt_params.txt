@@ -1,0 +1,19 @@
+$ for n in /krac_bt_runner /rescue_offboard_bt_controller /krac24_offboard_bt_adapter; do \
+      echo "===== $n ====="; \
+      ros2 param list "$n" 2>&1 || true; \
+      ros2 param dump "$n" 2>&1 || true; \
+      echo; \
+   done
+
+===== /krac_bt_runner =====
+Node not found
+Node not found
+
+===== /rescue_offboard_bt_controller =====
+Node not found
+Node not found
+
+===== /krac24_offboard_bt_adapter =====
+Node not found
+Node not found
+

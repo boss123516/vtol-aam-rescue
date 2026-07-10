@@ -1,0 +1,186 @@
+#!/bin/sh
+#
+# @name AMSR A-Tail VTOL
+# @type Standard VTOL
+# @class VTOL
+#
+# @maintainer User
+#
+
+# 1. VTOL 기본 설정 로드
+. ${R}etc/init.d/rc.vtol_defaults
+
+# 2. 시뮬레이션 환경 설정
+PX4_SIMULATOR=${PX4_SIMULATOR:=gz}
+PX4_GZ_WORLD=${PX4_GZ_WORLD:=default}
+PX4_SIM_MODEL=${PX4_SIM_MODEL:=amsr_vtol}
+
+# 3. 기본 파라미터 설정
+param set-default SIM_GZ_EN 1
+# This model already ships its own gz airspeed sensor (model://airspeed
+# link/joint below), which publishes real diff_pressure/temperature data
+# (confirmed live via `gz topic -e .../sensor/air_speed/air_speed`).
+# SENS_EN_ARSPDSIM=1 additionally starts the old software-simulated
+# sensor_airspeed_sim module on top of that (px4-rc.gzsim still has it
+# gated behind this param with a "remove once added" TODO for gz's native
+# sensor) -- the duplicate/conflicting source left calibrated_airspeed()
+# NaN, forcing VTOL transitions onto the aggressive fixed VT_TRANS_MIN_TM
+# time-based MC-weight ramp instead of real airspeed-based blending, which
+# was the actual root cause of repeated Quad-chute failures.
+param set-default SENS_EN_ARSPDSIM 0
+param set-default MIS_TKO_LAND_REQ 1
+
+# Failure Detector
+param set-default FD_ACT_EN 0
+param set-default FD_ACT_MOT_TOUT 500
+
+# 제어 할당 방식 (Control Allocation)
+param set-default CA_AIRFRAME 2  # Standard VTOL
+param set-default COM_PREARM_MODE 2     #
+# -------------------------------------------------------------------------
+# -------------------------------------------------------------------------
+# 4. 리프트 모터 & 푸셔 설정 (Control Allocation - Rotors)
+# -------------------------------------------------------------------------
+param set-default CA_ROTOR_COUNT 5
+
+# Rotor 0 (Motor 1): Front Right - CCW (표준 일치)
+param set-default CA_ROTOR0_PX 0.3418   # (0.4305 - 0.0887) = +0.3418 (앞)
+param set-default CA_ROTOR0_PY 0.502    # Y > 0 (오른쪽)
+param set-default CA_ROTOR0_KM 0.05     # CCW
+
+# Rotor 1 (Motor 2): Rear Left - CCW (수정됨: 위치 및 순서 교정)
+# [오류 원인] 기존에는 이것을 우측 후방으로 잡았음 -> 좌측 후방(-Y)으로 수정
+param set-default CA_ROTOR1_PX -0.3295  # (0.4305 - 0.760) = -0.3295 (뒤)
+param set-default CA_ROTOR1_PY -0.502   # Y < 0 (왼쪽)
+param set-default CA_ROTOR1_KM 0.05     # CCW (대각선 Motor 1과 동일)
+
+# Rotor 2 (Motor 3): Front Left - CW (표준 일치)
+param set-default CA_ROTOR2_PX 0.3418   # (0.4305 - 0.0887) = +0.3418 (앞)
+param set-default CA_ROTOR2_PY -0.502   # Y < 0 (왼쪽)
+param set-default CA_ROTOR2_KM -0.05    # CW
+
+# Rotor 3 (Motor 4): Rear Right - CW (수정됨: 위치 및 순서 교정)
+# [오류 원인] 기존에는 이것을 좌측 후방으로 잡았음 -> 우측 후방(+Y)으로 수정
+param set-default CA_ROTOR3_PX -0.3295  # (0.4305 - 0.760) = -0.3295 (뒤)
+param set-default CA_ROTOR3_PY 0.502    # Y > 0 (오른쪽)
+param set-default CA_ROTOR3_KM -0.05    # CW (대각선 Motor 3와 동일)
+
+# Rotor 4 (Motor 5): Pusher Prop - Forward Thrust
+param set-default CA_ROTOR4_PX -0.1835  # (0.4305 - 0.614) = -0.1835 (뒤)
+param set-default CA_ROTOR4_PZ 0.0322  # (0.0572 - 0.025) = 0.0322 (아래)
+param set-default CA_ROTOR4_AX 1.0
+param set-default CA_ROTOR4_AY 0.0
+param set-default CA_ROTOR4_AZ 0.0
+param set-default CA_ROTOR4_KM 0.0
+
+# -------------------------------------------------------------------------
+# 5. 서보 모터(조종면) 설정
+# -------------------------------------------------------------------------
+param set CA_SV_CS_COUNT 4
+
+# CS0, CS1: Ailerons
+param set CA_SV_CS0_TYPE 1
+param set CA_SV_CS0_TRQ_R -0.5
+param set CA_SV_CS1_TYPE 2
+param set CA_SV_CS1_TRQ_R 0.5
+
+# CS2: Left A-Tail
+param set CA_SV_CS2_TYPE 13
+param set CA_SV_CS2_TRQ_P 0.5
+param set CA_SV_CS2_TRQ_Y -0.5
+
+# CS3: Right A-Tail
+param set CA_SV_CS3_TYPE 14
+param set CA_SV_CS3_TRQ_P 0.5
+param set CA_SV_CS3_TRQ_Y 0.5
+
+# -------------------------------------------------------------------------
+# 6. Gazebo 통신 매핑
+# -------------------------------------------------------------------------
+# Motors
+param set-default SIM_GZ_EC_FUNC1 101
+param set-default SIM_GZ_EC_MIN1 10
+param set-default SIM_GZ_EC_MAX1 1500
+param set-default SIM_GZ_EC_FUNC2 102
+param set-default SIM_GZ_EC_MIN2 10
+param set-default SIM_GZ_EC_MAX2 1500
+param set-default SIM_GZ_EC_FUNC3 103
+param set-default SIM_GZ_EC_MIN3 10
+param set-default SIM_GZ_EC_MAX3 1500
+param set-default SIM_GZ_EC_FUNC4 104
+param set-default SIM_GZ_EC_MIN4 10
+param set-default SIM_GZ_EC_MAX4 1500
+
+param set-default SIM_GZ_EC_FUNC5 105
+param set-default SIM_GZ_EC_MIN5 0
+param set-default SIM_GZ_EC_MAX5 1900
+
+# Servos
+param set-default SIM_GZ_SV_FUNC1 201
+param set-default SIM_GZ_SV_FUNC2 202
+param set-default SIM_GZ_SV_FUNC3 203
+param set-default SIM_GZ_SV_FUNC4 204
+
+param set-default COM_RC_IN_MODE 1
+
+param set-default NPFG_PERIOD 12
+param set-default FW_PR_FF 0.2
+param set-default FW_PR_P 0.9
+param set-default FW_PSP_OFF 3
+param set-default FW_P_LIM_MIN -3
+param set-default FW_RR_FF 0.1
+param set-default FW_RR_P 0.3
+param set-default FW_AIRSPD_MIN 10
+param set-default FW_AIRSPD_TRIM 15
+param set-default FW_AIRSPD_MAX 25
+param set-default FW_THR_TRIM 0.25
+param set-default FW_THR_MAX 0.45
+param set-default FW_THR_MIN 0.05
+param set-default FW_T_CLMB_MAX 8
+param set-default FW_T_SINK_MAX 2.7
+param set-default FW_T_SINK_MIN 2.2
+
+param set-default MC_AIRMODE 1
+param set-default MC_ROLLRATE_P 0.3
+param set-default MC_PITCHRATE_P 0.3
+param set-default MC_YAW_P 1.6
+
+
+param set-default MIS_TAKEOFF_ALT 10
+
+param set-default MPC_XY_P 0.8
+param set-default MPC_XY_VEL_P_ACC 3
+param set-default MPC_XY_VEL_I_ACC 4
+param set-default MPC_XY_VEL_D_ACC 1
+
+param set-default NAV_ACC_RAD 5
+
+# NAV_DLL_ACT>0 makes PX4 require a live GCS heartbeat both to arm and to
+# avoid a mid-flight datalink-loss RTL failsafe (rcAndDataLinkCheck.cpp:
+# gcs_connection_required = NAV_DLL_ACT > 0). The BT flies the mission
+# autonomously with no human GCS operator, and relying on QGroundControl
+# purely to satisfy this check made flights fail whenever QGC crashed/lagged
+# in this sandboxed environment (confirmed live: RTL triggered mid-cruise
+# right after "No connection to the GCS" the moment QGC dropped out).
+param set-default NAV_DLL_ACT 0
+
+param set-default VT_FWD_THRUST_EN 0
+param set-default VT_F_TRANS_THR 0.22
+param set-default VT_PSHER_SLEW 0.05
+param set-default VT_ARSP_BLEND 12
+param set-default VT_ARSP_TRANS 15
+param set-default VT_TRANS_MIN_TM 10.0
+param set-default VT_TRANS_TIMEOUT 50.0
+param set-default VT_TYPE 2
+param set-default FD_ESCS_EN 0
+
+# calibrated_airspeed() reads as invalid during the transition even with a
+# working gz airspeed sensor and no sensor_airspeed_sim conflict (root cause
+# still open), so isFrontTransitionCompletedBase() falls back to declaring
+# the transition "done" after a flat VT_F_TR_OL_TM regardless of actual
+# speed -- confirmed live: Quad-chute hit at the same ~6-7s mark even after
+# quadrupling available thrust and raising VT_F_TRANS_THR, which only makes
+# sense if the FW-mode handoff timing itself was fixed and thrust-independent.
+# Default is 6.0s; giving this heavier custom airframe more open-loop time
+# before PX4 forces full FW authority.
+param set-default VT_F_TR_OL_TM 35.0

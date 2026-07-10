@@ -1,0 +1,17 @@
+$ ros2 topic echo /mavros/local_position/velocity_local --once
+
+header:
+  stamp:
+    sec: 1783649881
+    nanosec: 138622578
+  frame_id: base_link
+twist:
+  linear:
+    x: -0.018009701743721962
+    y: 0.006323802750557661
+    z: -0.04425010457634926
+  angular:
+    x: 9.614779858446979e-05
+    y: 0.00010337483633445989
+    z: -0.0003657192572906817
+---

@@ -1,0 +1,14 @@
+$ ros2 topic echo /mavros/state --once
+
+header:
+  stamp:
+    sec: 1783649872
+    nanosec: 702689356
+  frame_id: ''
+connected: true
+armed: false
+guided: true
+manual_input: false
+mode: AUTO.MISSION
+system_status: 0
+---

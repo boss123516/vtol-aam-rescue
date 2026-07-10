@@ -1,0 +1,40 @@
+$ for t in \
+    /mavros/state \
+    /mavros/mission/reached \
+    /mavros/mission/waypoints \
+    /krac/rescue_module/enable \
+    /krac/rescue_module/ready \
+    /krac/rescue_module/result \
+    /camera/target_error \
+    /camera/set_target \
+    /mavros/setpoint_velocity/cmd_vel_unstamped; do \
+      echo "===== $t ====="; ros2 topic info -v "$t" 2>&1 || true; echo; \
+   done
+
+===== /mavros/state =====
+Unknown topic '/mavros/state'
+
+===== /mavros/mission/reached =====
+Unknown topic '/mavros/mission/reached'
+
+===== /mavros/mission/waypoints =====
+Unknown topic '/mavros/mission/waypoints'
+
+===== /krac/rescue_module/enable =====
+Unknown topic '/krac/rescue_module/enable'
+
+===== /krac/rescue_module/ready =====
+Unknown topic '/krac/rescue_module/ready'
+
+===== /krac/rescue_module/result =====
+Unknown topic '/krac/rescue_module/result'
+
+===== /camera/target_error =====
+Unknown topic '/camera/target_error'
+
+===== /camera/set_target =====
+Unknown topic '/camera/set_target'
+
+===== /mavros/setpoint_velocity/cmd_vel_unstamped =====
+Unknown topic '/mavros/setpoint_velocity/cmd_vel_unstamped'
+

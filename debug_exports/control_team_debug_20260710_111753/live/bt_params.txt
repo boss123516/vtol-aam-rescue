@@ -1,0 +1,110 @@
+$ for n in /krac_bt_runner /rescue_offboard_bt_controller /krac24_offboard_bt_adapter; do \
+      echo "===== $n ====="; \
+      ros2 param list "$n" 2>&1 || true; \
+      ros2 param dump "$n" 2>&1 || true; \
+      echo; \
+   done
+
+===== /krac_bt_runner =====
+  align_p_gain
+  bt_viewer_direction
+  bt_xml_path
+  descend_speed
+  drop_wp_seq
+  enable_bt_viewer
+  gripper_stub_success
+  home_point
+  landing_wp_seq
+  mavros_ns
+  max_align_speed
+  max_ticks
+  mission_dir
+  mission_upload_stub_success
+  print_bt_transitions
+  qos_overrides./parameter_events.publisher.depth
+  qos_overrides./parameter_events.publisher.durability
+  qos_overrides./parameter_events.publisher.history
+  qos_overrides./parameter_events.publisher.reliability
+  rep_point
+  rescue_wp_seq
+  resume_wp_seq
+  safe_ascend_alt
+  sim_bypass
+  tick_rate_hz
+  use_sim_time
+/krac_bt_runner:
+  ros__parameters:
+    align_p_gain: 0.005
+    bt_viewer_direction: Vertical
+    bt_xml_path: /home/mudokim/workspace/hzy/krac-control-team-complete/ros2_ws/src/krac_control/bt/krac_control_team_cycle_bt.xml
+    descend_speed: 0.25
+    drop_wp_seq: 10
+    enable_bt_viewer: true
+    gripper_stub_success: false
+    home_point:
+    - 47.397971057728974
+    - 8.546163739800146
+    - 0.0
+    landing_wp_seq: 13
+    mavros_ns: /mavros
+    max_align_speed: 0.5
+    max_ticks: 0
+    mission_dir: /home/mudokim/workspace/hzy/krac-control-team-complete/ros2_ws/install/krac_control/share/krac_control/mission
+    mission_upload_stub_success: false
+    print_bt_transitions: true
+    qos_overrides:
+      /parameter_events:
+        publisher:
+          depth: 1000
+          durability: volatile
+          history: keep_last
+          reliability: reliable
+    rep_point:
+    - 47.39768885772897
+    - 8.545818292055744
+    - 10.0
+    rescue_wp_seq: 6
+    resume_wp_seq: 7
+    safe_ascend_alt: 30.0
+    sim_bypass: true
+    tick_rate_hz: 10.0
+    use_sim_time: false
+
+
+===== /rescue_offboard_bt_controller =====
+Node not found
+Node not found
+
+===== /krac24_offboard_bt_adapter =====
+  ascend_speed_mps
+  ascend_stable_sec
+  ascend_target_altitude_m
+  auto_proceed_after_hover_sec
+  center_tolerance_px
+  control_rate_hz
+  descend_speed_mps
+  descent_hold_error_px
+  enable_topic
+  execution_timeout_sec
+  handover_prestream_sec
+  hover_step_m
+  max_align_speed_mps
+  max_stable_vertical_speed_mps
+  minimum_hover_altitude_m
+  offboard_retry_sec
+  qos_overrides./parameter_events.publisher.depth
+  qos_overrides./parameter_events.publisher.durability
+  qos_overrides./parameter_events.publisher.history
+  qos_overrides./parameter_events.publisher.reliability
+  ready_topic
+  result_topic
+  search_altitude_m
+  search_speed_mps
+  target_label
+  target_label_topic
+  use_sim_time
+  velocity_topic
+  vision_error_topic
+  vision_fresh_sec
+  vision_p_gain
+failed to check service availability: rcl node's context is invalid, at ./src/rcl/node.c:428

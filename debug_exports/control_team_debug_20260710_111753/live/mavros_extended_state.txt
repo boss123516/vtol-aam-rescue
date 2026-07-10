@@ -1,0 +1,10 @@
+$ ros2 topic echo /mavros/extended_state --once
+
+header:
+  stamp:
+    sec: 1783649877
+    nanosec: 102937598
+  frame_id: ''
+vtol_state: 3
+landed_state: 1
+---
