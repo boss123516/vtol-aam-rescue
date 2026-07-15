@@ -24,6 +24,22 @@ public:
         enable_srv_ = this->create_service<std_srvs::srv::SetBool>("/precision_lander/enable", std::bind(&PrecisionLander::enable_cb, this, std::placeholders::_1, std::placeholders::_2));
         timer_ = this->create_wall_timer(50ms, std::bind(&PrecisionLander::control_loop, this));
 
+        // 실측(2026-07-15): 픽셀오차를 0 으로 몰면 '카메라'가 타깃 위에 온다. 그런데
+        // 카메라는 base_link 기준 body x=+0.2, 그리퍼는 x=0 이라 카메라가 타깃 위면
+        // 그리퍼는 0.2m 뒤에 남는다. 실제로 착륙 후 그리퍼-트레이 거리가 0.168m 였고
+        // (트레이 짧은변 반폭 68.5mm) 손가락이 허공을 조여서 파지가 매번 실패했다.
+        // 목표를 이 오프셋만큼 편향시켜 '그리퍼'가 타깃 위에 오게 한다.
+        // 축 매핑: body_x = -err_y_m , body_y = +err_x_m (아래 주석 참고).
+        // -> 타깃을 카메라 기준 body x=-0.2 에 두려면 err_y_m 목표가 +0.2 가 된다.
+        // 부호는 이 파일에서 과거에도 실측으로 뒤집힌 이력이 있으니 파라미터로 뺀다.
+        this->declare_parameter("grasp_offset_err_y_m", 0.20);
+        this->declare_parameter("grasp_offset_err_x_m", 0.0);
+        grasp_offset_err_y_m_ = this->get_parameter("grasp_offset_err_y_m").as_double();
+        grasp_offset_err_x_m_ = this->get_parameter("grasp_offset_err_x_m").as_double();
+        RCLCPP_INFO(this->get_logger(),
+            "파지 정렬 오프셋: err_x 목표=%.2fm, err_y 목표=%.2fm (그리퍼를 타깃 위로)",
+            grasp_offset_err_x_m_, grasp_offset_err_y_m_);
+
         RCLCPP_INFO(this->get_logger(), "🛬 정밀 착륙(Precision Lander) 가동! (0도/180도 최단거리 정렬 적용)");
     }
 
@@ -95,6 +111,21 @@ private:
     const double BLIND_DESCENT_SPEED = -0.12;
     const double PRECISION_DESCEND_SPEED = -0.35;
     const double TARGET_FRESH_MAX_AGE_SEC = 3.0;
+
+    // 실측(2026-07-15): 정렬 오차가 0.30~0.70m 대역에서 계속 머물러 하강이
+    // 0.12m/s로 기었고, 0.70m를 넘길 때마다(60초 동안 21회) 고도 유지로 빠져
+    // 아예 안 내려갔다. 결과적으로 3.75m에서 60초 동안 0.79m밖에 못 내려가
+    // rescue 컨트롤러의 정밀착륙 타임아웃에 걸려 AUTO.LAND 로 넘어갔다.
+    // 카메라가 관성 안정화가 아니라 기체 고정이라 XY 보정으로 기울 때마다
+    // 화면 속 타깃이 흔들려서 이 대역을 못 벗어난다 - 게이트를 그 실측 대역
+    // 바깥으로 넓혀 정상 하강 구간에 포함시킨다.
+    const double ALIGNED_RADIUS_M = 0.50;
+    const double APPROACH_RADIUS_M = 1.00;
+    const double APPROACH_DESCEND_SCALE = 0.5;
+
+    // 카메라 대신 그리퍼를 타깃 위에 세우기 위한 목표 편향(미터, 지면 평면).
+    double grasp_offset_err_y_m_ = 0.20;
+    double grasp_offset_err_x_m_ = 0.0;
 
     rclcpp::Publisher<geometry_msgs::msg::Twist>::SharedPtr vel_pub_;
     rclcpp::Subscription<krac_interfaces::msg::TargetError>::SharedPtr vision_sub_;
@@ -183,12 +214,17 @@ private:
         // 🎯 2. 타겟 감지 시 정밀 정렬 (요동침 방지 적용)
         // =======================================================
         double alt_factor = std::max(current_alt_, 0.5);
-        double err_x_m = vision_err_.pixel_err_x * (alt_factor / fx_);
-        double err_y_m = vision_err_.pixel_err_y * (alt_factor / fy_);
+        // 카메라 기준 생 오차. 이걸 0 으로 몰면 '카메라'가 타깃 위에 서고 그리퍼는
+        // 0.2m 뒤에 남는다 - 그래서 목표를 오프셋만큼 옮겨 '그리퍼'를 타깃 위에 세운다.
+        const double err_x_raw = vision_err_.pixel_err_x * (alt_factor / fx_);
+        const double err_y_raw = vision_err_.pixel_err_y * (alt_factor / fy_);
+        double err_x_m = err_x_raw - grasp_offset_err_x_m_;
+        double err_y_m = err_y_raw - grasp_offset_err_y_m_;
 
         RCLCPP_INFO_THROTTLE(this->get_logger(), *this->get_clock(), 500,
-            "[DBG] px=(%.1f,%.1f) err_m=(%.3f,%.3f) alt=%.2f yaw=%.1fdeg",
-            vision_err_.pixel_err_x, vision_err_.pixel_err_y, err_x_m, err_y_m,
+            "[DBG] px=(%.1f,%.1f) err_cam=(%.3f,%.3f) err_grip=(%.3f,%.3f) alt=%.2f yaw=%.1fdeg",
+            vision_err_.pixel_err_x, vision_err_.pixel_err_y,
+            err_x_raw, err_y_raw, err_x_m, err_y_m,
             current_alt_, current_yaw_ * 180.0 / M_PI);
 
         // PID 연산
@@ -269,7 +305,7 @@ private:
         double dist_m = std::hypot(err_x_m, err_y_m);
         double yaw_deg = filtered_yaw_err_ * (180.0 / M_PI); // 필터링된 각도 출력
 
-        if (dist_m < 0.30) {
+        if (dist_m < ALIGNED_RADIUS_M) {
             last_aligned_time_ = this->now();
             has_been_aligned_ = true;
             vel_cmd.linear.z =
@@ -277,10 +313,11 @@ private:
                 (current_alt_ < 0.70 ? BLIND_DESCENT_SPEED : PRECISION_DESCEND_SPEED);
             RCLCPP_INFO_THROTTLE(this->get_logger(), *this->get_clock(), 1000,
                 "🎯 [Aligned] 정밀 하강 중 (오차: %.2fm, 각도: %.1f도, 고도: %.1fm)", dist_m, yaw_deg, current_alt_);
-        } else if (dist_m < 0.70) {
-            vel_cmd.linear.z = PRECISION_DESCEND_SPEED * 0.35;
+        } else if (dist_m < APPROACH_RADIUS_M) {
+            vel_cmd.linear.z = PRECISION_DESCEND_SPEED * APPROACH_DESCEND_SCALE;
             RCLCPP_INFO_THROTTLE(this->get_logger(), *this->get_clock(), 1000,
-                "↘️ [Approaching] 센터 진입 중... (각도: %.1f도)", yaw_deg);
+                "↘️ [Approaching] 센터 진입 중... (오차: %.2fm, 각도: %.1f도, 고도: %.1fm)",
+                dist_m, yaw_deg, current_alt_);
         } else {
             vel_cmd.linear.z = std::clamp(KP_ALT_HOLD * (hold_alt_m_ - current_alt_),
                                            -MAX_ALT_HOLD_VEL, MAX_ALT_HOLD_VEL);

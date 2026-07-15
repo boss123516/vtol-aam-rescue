@@ -2,6 +2,7 @@
 
 import re
 import subprocess
+import threading
 
 import rclpy
 from rclpy.node import Node
@@ -10,13 +11,29 @@ from sensor_msgs.msg import Image
 
 DEFAULT_GZ_TOPIC = '/world/default/model/amsr_vtol_0/link/camera_link/sensor/camera/image'
 
+# Each gz.msgs.Image DebugString printed by `gz topic -e` starts with the
+# `header {` field, so consecutive messages in the stream are delimited by a
+# newline immediately followed by `header {`. The escaped binary `data:` payload
+# never contains a raw newline (non-printable bytes are octal-escaped), so this
+# delimiter is safe to split on.
+_MSG_DELIM = b'\nheader {'
+_MAX_BUFFER_BYTES = 64 * 1024 * 1024  # safety cap; ~13 full 1280x960 frames
+
 
 class GzImageRepublisher(Node):
     """Republish a Gazebo Transport camera topic as ROS2 sensor_msgs/Image.
 
     This is a fallback bridge for environments where ros_gz_bridge does not decode
-    the AMSR camera topic correctly. It shells out to `gz topic -e`, so it is not
-    ideal for high FPS, but it is convenient for YOLO pipeline debugging.
+    the AMSR camera topic correctly.
+
+    A single long-lived `gz topic -e` subprocess streams the camera continuously;
+    a reader thread drains it (keeping only the newest complete frame) and a timer
+    republishes that frame at ``rate_hz``. This replaces the previous design that
+    spawned a fresh `gz topic -e -n 1` process every tick: those short-lived
+    subscribers were routinely SIGKILLed on the 1s timeout mid-handshake, leaving
+    orphaned subscriptions whose send queues accumulated 30 Hz camera frames
+    inside the gz server (~110 MB/s RSS growth -> eventual OOM/freeze). One steady,
+    promptly-drained subscription lets gz's normal flow control reclaim frames.
     """
 
     def __init__(self):
@@ -26,44 +43,76 @@ class GzImageRepublisher(Node):
         self.declare_parameter('ros_topic', '/image_raw')
         self.declare_parameter('frame_id', 'camera_link')
         self.declare_parameter('rate_hz', 5.0)
-        self.declare_parameter('timeout_sec', 1.0)
         self.declare_parameter('encoding', 'rgb8')
 
         self.gz_topic = self.get_parameter('gz_topic').get_parameter_value().string_value
         self.ros_topic = self.get_parameter('ros_topic').get_parameter_value().string_value
         self.frame_id = self.get_parameter('frame_id').get_parameter_value().string_value
         self.rate_hz = self.get_parameter('rate_hz').get_parameter_value().double_value
-        self.timeout_sec = self.get_parameter('timeout_sec').get_parameter_value().double_value
         self.encoding = self.get_parameter('encoding').get_parameter_value().string_value
 
         self.pub = self.create_publisher(Image, self.ros_topic, 10)
+
+        # Newest complete raw message block, guarded by _lock. Set by the reader
+        # thread, consumed (and cleared) by the publish timer so we only ever
+        # publish fresh frames.
+        self._lock = threading.Lock()
+        self._latest_raw = None
+        self._stop = threading.Event()
+
+        self._proc = subprocess.Popen(
+            ['gz', 'topic', '-e', '-t', self.gz_topic],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.DEVNULL,
+            bufsize=0,
+        )
+        self._reader = threading.Thread(target=self._reader_loop, daemon=True)
+        self._reader.start()
+
         period = 1.0 / max(self.rate_hz, 0.1)
         self.timer = self.create_timer(period, self.timer_callback)
 
-        self.get_logger().info(f'Gazebo image republisher: {self.gz_topic} -> {self.ros_topic} @ {self.rate_hz:.1f} Hz')
+        self.get_logger().info(
+            f'Gazebo image republisher (persistent stream): '
+            f'{self.gz_topic} -> {self.ros_topic} @ {self.rate_hz:.1f} Hz')
+
+    def _reader_loop(self):
+        """Continuously drain the gz stream, retaining only the newest frame.
+
+        The stream is a run of concatenated message DebugStrings delimited by
+        ``\\nheader {``. ``_parse_gz_image`` locates width/height/step/data by
+        regex, so a complete block need not carry its leading ``header {`` prefix
+        for parsing to succeed.
+        """
+        buffer = bytearray()
+        stream = self._proc.stdout
+        while not self._stop.is_set():
+            chunk = stream.read(262144)
+            if not chunk:
+                break  # gz topic exited / EOF
+            buffer.extend(chunk)
+
+            # Locate the last two delimiters via C-level rfind (cheap even on a
+            # multi-MB buffer); the newest *complete* message lies between them.
+            last = buffer.rfind(_MSG_DELIM)
+            if last > 0:
+                prev = buffer.rfind(_MSG_DELIM, 0, last)
+                start = 0 if prev < 0 else prev + 1  # drop the delimiter's leading '\n'
+                with self._lock:
+                    self._latest_raw = bytes(buffer[start:last])
+                # Keep only the still-streaming tail (from the last delimiter on).
+                del buffer[:last + 1]
+
+            if len(buffer) > _MAX_BUFFER_BYTES:
+                # Delimiter never matched (unexpected format); don't grow forever.
+                del buffer[:-1024]
 
     def timer_callback(self):
-        try:
-            result = subprocess.run(
-                ['gz', 'topic', '-e', '-t', self.gz_topic, '-n', '1'],
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
-                text=False,
-                timeout=self.timeout_sec,
-            )
-        except subprocess.TimeoutExpired:
-            return
-        except Exception as exc:
-            self.get_logger().warn(f'Failed to execute gz topic: {exc}')
-            return
-
-        raw = result.stdout
+        with self._lock:
+            raw = self._latest_raw
+            self._latest_raw = None
         if not raw:
-            err = result.stderr.decode('utf-8', errors='ignore').strip()
-            if err:
-                self.get_logger().debug(f'gz topic stderr: {err}')
             return
-
         msg = self._parse_gz_image(raw)
         if msg is None:
             return
@@ -108,6 +157,19 @@ class GzImageRepublisher(Node):
         msg.step = step
         msg.data = img_bytes[:expected]
         return msg
+
+    def destroy_node(self):
+        self._stop.set()
+        try:
+            if self._proc and self._proc.poll() is None:
+                self._proc.terminate()
+                try:
+                    self._proc.wait(timeout=2.0)
+                except subprocess.TimeoutExpired:
+                    self._proc.kill()
+        except Exception:
+            pass
+        super().destroy_node()
 
 
 def main(args=None):

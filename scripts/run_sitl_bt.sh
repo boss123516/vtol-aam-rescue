@@ -59,6 +59,8 @@ ros2 run ros_gz_bridge parameter_bridge \
   "/model/${GZ_MODEL_NAME}/servo_4@std_msgs/msg/Float64]gz.msgs.Double" \
   "/model/${GZ_MODEL_NAME}/servo_5@std_msgs/msg/Float64]gz.msgs.Double" \
   "/model/${GZ_MODEL_NAME}/servo_6@std_msgs/msg/Float64]gz.msgs.Double" \
+  "/model/${GZ_MODEL_NAME}/gimbal_yaw@std_msgs/msg/Float64]gz.msgs.Double" \
+  "/model/${GZ_MODEL_NAME}/gimbal_pitch@std_msgs/msg/Float64]gz.msgs.Double" \
   "/survivor_tray_rep/attach@std_msgs/msg/Empty]gz.msgs.Empty" \
   "/survivor_tray_rep/detach@std_msgs/msg/Empty]gz.msgs.Empty" \
   "/survivor_tray_rep/gripper_state@std_msgs/msg/Bool[gz.msgs.Boolean" \
@@ -151,8 +153,36 @@ if [[ "${START_AUTO_SPAWN}" == "true" ]]; then
 fi
 
 if [[ "${START_RESCUE_PLACEHOLDER}" == "true" ]]; then
+  # GIMBAL_SELFTEST=true -> at REP, sweep the gimbal through 동서남북 once (demo
+  # of the real gimbal motion) before the normal immediate-detect check. Does
+  # not change the actual rescue/landing logic.
+  # MANUAL_GRASP=false 로 끄면 예전처럼 착륙 후 바로 상승한다(수동 파지 생략).
   start_support_process "Rescue placeholder" \
-    ros2 run krac_control rescue_controller_placeholder.py
+    ros2 run krac_control rescue_controller_placeholder.py \
+    --ros-args \
+    -p selftest_sweep_enable:="${GIMBAL_SELFTEST:-false}" \
+    -p manual_grasp_enable:="${MANUAL_GRASP:-true}" \
+    -p gz_model_name:="${GZ_MODEL_NAME}"
+fi
+
+if [[ "${MANUAL_GRASP:-true}" == "true" ]]; then
+  echo "[BT] MANUAL_GRASP on: 착륙 후 그리퍼 수동 파지 대기. 별도 터미널에서"
+  echo "[BT]   cd ${REPO_DIR} && source ros2_ws/install/setup.bash"
+  echo "[BT]   python3 scripts/gripper_teleop.py"
+  echo "[BT] 를 실행해 집게를 조작하고 Enter 로 파지를 확정하세요(TTY 필요)."
+fi
+
+# Gimbal relay: converts the rescue controller's /gimbal/angle_cmd (deg) into
+# the Gazebo joint-position-controller topics bridged above, and echoes
+# /gimbal/attitude. GZ_MODEL_NAME is exported so it picks the right model.
+if [[ "${START_GIMBAL_RELAY:-true}" == "true" ]]; then
+  export GZ_MODEL_NAME
+  start_support_process "Gimbal relay" \
+    python3 "$REPO_DIR/scripts/gimbal_relay.py" \
+    --ros-args \
+    -p gz_model_name:="${GZ_MODEL_NAME}" \
+    -p yaw_sign:="${GIMBAL_YAW_SIGN:-1.0}" \
+    -p pitch_sign:="${GIMBAL_PITCH_SIGN:--1.0}"
 fi
 
 if [[ "${START_IMAGE_REPUBLISHER}" == "true" ]]; then
@@ -204,6 +234,57 @@ if [[ "$CONNECTED" == "true" ]]; then
   ros2 service call /mavros/param/set mavros_msgs/srv/ParamSetV2 \
     "{force_set: true, param_id: 'NAV_DLL_ACT', value: {type: 2, integer_value: 0}}" \
     >"$RUN_LOG_DIR/nav_dll_act_disable.log" 2>&1 || true
+
+  # SITL-only PRE-ARM relaxation. On the stock gz standard_vtol there is no
+  # simulated airspeed sensor, so the airspeed selector reports "module down" and
+  # commander refuses to arm ("Resolve system health failures first"). We skip
+  # ONLY that airspeed arming gate; the FW still uses airspeed if present. Do NOT
+  # set FW_USE_AIRSPD=0 here (leaves the FW with no airspeed feedback -> climbs
+  # away and quad-chutes after transition, observed 2026-07-13).
+  #
+  # IMPORTANT (2026-07-14): we no longer force EKF2_MAG_CHECK=0 / COM_ARM_MAG_STR=0.
+  # The magnetometer is actually healthy here (~48 uT, matches the world field);
+  # the only real problem is that on a fresh boot EKF2 needs ~15-40 s of GPS+mag
+  # fusion before its yaw/heading estimate becomes valid. Forcing those two params
+  # off dropped the heading arming gate, so the BT armed *during* the invalid-yaw
+  # window and the multicopter flipped over on takeoff (bad yaw -> wrong tilt
+  # command -> nose into the ground; user report "바로 천이 안 되고 땅에 박음").
+  # Instead we keep PX4's own heading gate active and WAIT below until the
+  # estimator stops reporting an invalid heading, so arming happens with a valid
+  # yaw and the MC takeoff + VTOL transition proceed normally.
+  # Set BT_SITL_RELAX_PREARM=false to skip the airspeed CBRK too (e.g. real HW).
+  if [[ "${BT_SITL_RELAX_PREARM:-true}" == "true" ]]; then
+    echo "[BT] Relaxing SITL pre-arm airspeed gate (no simulated airspeed sensor)..."
+    set_int_param() {
+      ros2 service call /mavros/param/set mavros_msgs/srv/ParamSetV2 \
+        "{force_set: true, param_id: '$1', value: {type: 2, integer_value: $2}}" \
+        >>"$RUN_LOG_DIR/sitl_relax_prearm.log" 2>&1 || true
+    }
+    set_int_param CBRK_AIRSPD_CHK 162128  # skip the airspeed PREFLIGHT (arming)
+                                          # check only; FW still USES airspeed.
+  fi
+
+  # Wait for EKF2 heading/yaw to converge before the BT is allowed to arm.
+  # "heading estimate invalid" is a transient fresh-boot condition; arming into
+  # it flips the MC on takeoff. We watch the PX4 log and proceed once no new
+  # "heading estimate invalid" line has appeared for ~10 s (min 15 s settle,
+  # max 75 s fallback). BT_SITL_WAIT_HEADING=false skips the wait.
+  if [[ "${BT_SITL_WAIT_HEADING:-true}" == "true" ]]; then
+    echo "[BT] Waiting for EKF heading estimate to become valid before arming..."
+    PX4_LOG="$RUN_LOG_DIR/sitl_vtol.launch.log"
+    prev_cnt=-1; stable=0
+    for i in $(seq 1 75); do
+      cnt=$(grep -ac "heading estimate invalid" "$PX4_LOG" 2>/dev/null || true)
+      cnt=${cnt:-0}
+      if [[ "$cnt" == "$prev_cnt" ]]; then stable=$((stable+1)); else stable=0; fi
+      prev_cnt=$cnt
+      if (( i >= 15 && stable >= 10 )); then
+        echo "[BT] EKF heading settled (no new invalid-heading for ~10s; count=$cnt, t=${i}s)."
+        break
+      fi
+      sleep 1
+    done
+  fi
 fi
 
 if [[ "$CONNECTED" != "true" ]]; then

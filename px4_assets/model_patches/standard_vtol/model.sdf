@@ -922,19 +922,105 @@
       <motorType>velocity</motorType>
     </plugin>
 
+    <!-- ===== 2-DOF camera gimbal (yaw + pitch) =====
+         base_link -> gimbal_yaw_joint(Z) -> gimbal_yaw_link
+                   -> gimbal_pitch_joint(Y) -> gimbal_pitch_link -> camera_link
+         At rest (joints=0) the camera looks FORWARD (+X). A pitch joint angle
+         of +90 deg (+1.5708 rad) points the camera straight down (nadir).
+         The gimbal_relay node maps /gimbal/angle_cmd(deg) -> these joints:
+           pitch_joint_rad = radians(-pitch_cmd_deg)   (nadir cmd=-90 -> +1.5708)
+           yaw_joint_rad   = radians( yaw_cmd_deg  )
+    -->
+    <link name="gimbal_yaw_link">
+      <pose>0.2 0 -0.07 0 0 0</pose>
+      <inertial>
+        <mass>0.02</mass>
+        <inertia><ixx>1e-5</ixx><ixy>0</ixy><ixz>0</ixz><iyy>1e-5</iyy><iyz>0</iyz><izz>1e-5</izz></inertia>
+      </inertial>
+    </link>
+    <joint name="gimbal_yaw_joint" type="revolute">
+      <parent>base_link</parent>
+      <child>gimbal_yaw_link</child>
+      <axis>
+        <xyz>0 0 1</xyz>
+        <limit><lower>-3.1416</lower><upper>3.1416</upper><effort>10</effort><velocity>6.0</velocity></limit>
+        <dynamics><damping>0.05</damping></dynamics>
+      </axis>
+    </joint>
+
+    <link name="gimbal_pitch_link">
+      <pose>0.2 0 -0.07 0 0 0</pose>
+      <inertial>
+        <mass>0.02</mass>
+        <inertia><ixx>1e-5</ixx><ixy>0</ixy><ixz>0</ixz><iyy>1e-5</iyy><iyz>0</iyz><izz>1e-5</izz></inertia>
+      </inertial>
+    </link>
+    <joint name="gimbal_pitch_joint" type="revolute">
+      <parent>gimbal_yaw_link</parent>
+      <child>gimbal_pitch_link</child>
+      <axis>
+        <xyz>0 1 0</xyz>
+        <limit><lower>-0.2</lower><upper>1.75</upper><effort>10</effort><velocity>6.0</velocity></limit>
+        <dynamics><damping>0.05</damping></dynamics>
+      </axis>
+    </joint>
+
     <include merge='true'>
       <uri>model://mono_cam</uri>
-      <pose>0.2 0 -0.07 0 1.5707 0</pose>
+      <pose>0.2 0 -0.07 0 0 0</pose>
       <name>mono_cam</name>
     </include>
     <joint name="camera_joint" type="fixed">
-      <parent>base_link</parent>
+      <parent>gimbal_pitch_link</parent>
       <child>camera_link</child>
     </joint>
+
+    <plugin filename="gz-sim-joint-position-controller-system"
+            name="gz::sim::systems::JointPositionController">
+      <joint_name>gimbal_yaw_joint</joint_name>
+      <sub_topic>gimbal_yaw</sub_topic>
+      <!-- 실측(2026-07-15): p=8/i=0.6/d=0.4 로는 명령각에 못 닿고 정상상태 오차가
+           크게 남았다(직하 명령에 비행 중 5도, yaw 180 명령에 7도). gz 의
+           JointPositionController 는 i_max/i_min 을 안 적으면 적분항이 +-1 로
+           잘려서 오차를 못 지운다 - 명시적으로 키우는 게 핵심이다. -->
+      <p_gain>50.0</p_gain>
+      <i_gain>10.0</i_gain>
+      <d_gain>0.05</d_gain>
+      <i_max>20</i_max>
+      <i_min>-20</i_min>
+      <cmd_max>100</cmd_max>
+      <cmd_min>-100</cmd_min>
+    </plugin>
+    <plugin filename="gz-sim-joint-position-controller-system"
+            name="gz::sim::systems::JointPositionController">
+      <joint_name>gimbal_pitch_joint</joint_name>
+      <sub_topic>gimbal_pitch</sub_topic>
+      <!-- yaw 와 같은 이유로 상향. pitch 는 카메라 무게를 들고 있어 오차가 더
+           크게 남았다(직하에서 60도 명령에 5도, 지상 정지 상태 직하 명령엔 18도
+           오차로 71~72도에서 진동). -->
+      <p_gain>50.0</p_gain>
+      <i_gain>10.0</i_gain>
+      <d_gain>0.05</d_gain>
+      <i_max>20</i_max>
+      <i_min>-20</i_min>
+      <cmd_max>100</cmd_max>
+      <cmd_min>-100</cmd_min>
+    </plugin>
+    <plugin filename="gz-sim-joint-state-publisher-system"
+            name="gz::sim::systems::JointStatePublisher">
+      <joint_name>gimbal_yaw_joint</joint_name>
+      <joint_name>gimbal_pitch_joint</joint_name>
+    </plugin>
     <static>0</static>
 
     <link name="gripper_body">
-      <pose>0.0 0 -0.08 0 0 0</pose>
+      <!-- 실측(2026-07-15): -0.08 이면 착륙(스키드 바닥 -0.21) 상태에서 손끝이 지면
+           위 45mm 에 떠서 survivor_tray 의 벽(0~30mm)에 물리적으로 닿지 못했다.
+           30mm 내려서 손끝이 20mm(벽 중간)에 오게 한다. 이때 최저점은 base_link
+           아래 195mm 라 스키드(210mm)보다 15mm 높아 착륙 간섭은 없다.
+           손가락 각도-틈: -60도=211mm(활짝) / -45도=177mm / -30도=138mm(트레이
+           짧은변 137mm 물림) / 0도=60mm. -->
+      <pose>0.0 0 -0.11 0 0 0</pose>
       <inertial>
         <mass>0.6</mass>
         <inertia><ixx>0.002</ixx><ixy>0</ixy><ixz>0</ixz><iyy>0.001</iyy><iyz>0</iyz><izz>0.001</izz></inertia>
