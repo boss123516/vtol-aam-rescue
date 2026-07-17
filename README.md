@@ -199,3 +199,13 @@ ros2_ws/src/krac_control/bt/krac_mission_bt_krac24_split.xml
 ```
 
 BT에서는 구조물 상공 도착과 외부 모듈 결과 대기만 수행합니다. 실제 임시 착륙 동작은 `rescue_controller_placeholder.py`에 있습니다.
+
+실기체 전환 시 꼭 수정할 곳
+구분	수정 파일/위치	현재 상태	실기체 전환
+구조 미션 좌표	[krac24_rescue_leg.plan](/home/mudokim/workspace/hzy/vtol-aam-rescue-split/ros2_ws/src/krac_control/src/krac24_rescue_leg.plan), [krac24_return_leg.plan](/home/mudokim/workspace/hzy/vtol-aam-rescue-split/ros2_ws/src/krac_control/src/krac24_return_leg.plan)	47.397… / 8.546… 시뮬레이터 좌표	실제 HOME, REP, 귀환 경로, 고도, VTOL transition을 QGC에서 재작성
+구조 상공 이동 좌표	[split BT 156행 (line 156)](/home/mudokim/workspace/hzy/vtol-aam-rescue-split/ros2_ws/src/krac_control/bt/krac_mission_bt_krac24_split.xml:156)	x=-26.03, y=-31.41, z=2.0 로컬 ENU 고정값	실기체 EKF local origin은 부팅/홈 위치에 따라 달라지므로 고정값 제거 또는 실제 REP의 global 좌표를 local로 변환하도록 변경
+waypoint 번호 결합	[split BT (line 51)](/home/mudokim/workspace/hzy/vtol-aam-rescue-split/ros2_ws/src/krac_control/bt/krac_mission_bt_krac24_split.xml:51)	rescue seq=6, return seq=1/3/7에 강결합	.plan item 수·순서가 바뀌면 함께 갱신
+FCU 연결	[mavros_params.yaml (line 6)](/home/mudokim/workspace/hzy/vtol-aam-rescue-split/ros2_ws/src/krac_mission/config/mavros_params.yaml:6)	localhost UDP SITL	실제 FCU의 serial:///dev/...:baud 또는 실제 UDP endpoint, system/component ID로 변경
+구조 컨트롤러	[rescue_controller_placeholder.py (line 315)](/home/mudokim/workspace/hzy/vtol-aam-rescue-split/ros2_ws/src/krac_control/src/rescue_controller_placeholder.py:315)	MAVROS 제어는 가능하지만 파지부는 Gazebo 토픽	실제 그리퍼 드라이버·접촉 센서·상승 중 payload 유지 검증으로 교체
+짐벌/카메라	[gimbal_node.py (line 90)](/home/mudokim/workspace/hzy/vtol-aam-rescue-split/ros2_ws/src/krac_gimbal/krac_gimbal/gimbal_node.py:90), [camera.yaml (line 6)](/home/mudokim/workspace/hzy/vtol-aam-rescue-split/ros2_ws/src/krac_gimbal/config/camera.yaml:6)	실제 SIYI A8 mini/RTSP용 노드는 이미 존재	IP, RTSP 주소, 카메라 캘리브레이션, 기체-카메라-그리퍼 외부파라미터를 실측값으로 설정
+실행 진입점	[run_sitl_bt.sh (line 48)](/home/mudokim/workspace/hzy/vtol-aam-rescue-split/scripts/run_sitl_bt.sh:48)

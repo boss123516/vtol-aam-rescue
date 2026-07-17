@@ -32,13 +32,32 @@ public:
         // 축 매핑: body_x = -err_y_m , body_y = +err_x_m (아래 주석 참고).
         // -> 타깃을 카메라 기준 body x=-0.2 에 두려면 err_y_m 목표가 +0.2 가 된다.
         // 부호는 이 파일에서 과거에도 실측으로 뒤집힌 이력이 있으니 파라미터로 뺀다.
-        this->declare_parameter("grasp_offset_err_y_m", 0.20);
+        //
+        // ⚠️ 단위 주의: 이 값은 '참 미터'가 아니라 **아래 fx_/fy_ 로 환산된 lander 단위**다.
+        // fx_/fy_ 는 실제 카메라와 안 맞는다(2026-07-17 확인):
+        //   카메라 = PX4 스톡 mono_cam, 1280x960, hfov=1.74rad -> fx_orig=fy_orig=539.9
+        //   vision_tracker 가 1024x1024 로 리사이즈(4:3 -> 1:1, 비등방: x0.8 / y1.0667)
+        //   -> 참값은 fx=431.9, fy=575.9 인데 아래는 582.5 / 1036.7 (fx 1.35x, fy 1.80x 과대)
+        // 오프셋이 0 이던 시절엔 이게 안 드러났다. err_m -> 0 을 몰면 px -> 0 이라
+        // 수렴점이 f 와 무관했기 때문이다(f 는 게인만 바꿨다). 하지만 이 오프셋은
+        // '타깃을 화면중심에서 물리적으로 얼마나 떨어뜨릴까'라서 f 가 수렴점에 직접
+        // 곱해진다 -> 0.20 을 넣으면 실제로는 0.20*1.80 = 0.36m 가 걸려 그리퍼가
+        // 바구니(짧은변 138mm, 반폭 69mm)를 ~0.16m 지나쳐 내려앉았다(실측 확인).
+        // 여기서 원하는 참값은 0.20m 이므로 0.20 * (575.9/1036.7) = 0.111 을 넣는다.
+        //
+        // fx_/fy_ 를 참값으로 고치는 게 정공법이지만, ALIGNED_RADIUS_M / APPROACH_RADIUS_M /
+        // 데드밴드 / lateral_scale 이 전부 이 틀린 f 기준으로 실측 튜닝된 값이라
+        // 같이 재튜닝해야 한다. 그건 별건으로 두고 여기선 오프셋만 바로잡는다.
+        this->declare_parameter("grasp_offset_err_y_m", 0.111);
         this->declare_parameter("grasp_offset_err_x_m", 0.0);
         grasp_offset_err_y_m_ = this->get_parameter("grasp_offset_err_y_m").as_double();
         grasp_offset_err_x_m_ = this->get_parameter("grasp_offset_err_x_m").as_double();
         RCLCPP_INFO(this->get_logger(),
-            "파지 정렬 오프셋: err_x 목표=%.2fm, err_y 목표=%.2fm (그리퍼를 타깃 위로)",
-            grasp_offset_err_x_m_, grasp_offset_err_y_m_);
+            "파지 정렬 오프셋: err_x 목표=%.3f, err_y 목표=%.3f (lander 단위) "
+            "-> 실제 %.3fm / %.3fm (fx_=%.1f fy_=%.1f 기준)",
+            grasp_offset_err_x_m_, grasp_offset_err_y_m_,
+            grasp_offset_err_x_m_ * (582.5 / 431.9), grasp_offset_err_y_m_ * (1036.7 / 575.9),
+            fx_, fy_);
 
         RCLCPP_INFO(this->get_logger(), "🛬 정밀 착륙(Precision Lander) 가동! (0도/180도 최단거리 정렬 적용)");
     }

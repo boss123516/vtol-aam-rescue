@@ -9,7 +9,7 @@ from rclpy.node import Node
 from rclpy.qos import qos_profile_sensor_data
 from sensor_msgs.msg import Image
 from geometry_msgs.msg import PoseStamped, Twist
-from std_msgs.msg import String
+from std_msgs.msg import Empty, String
 from krac_interfaces.msg import TargetError
 from cv_bridge import CvBridge
 from ament_index_python.packages import get_package_share_directory
@@ -45,6 +45,7 @@ class VisionTracker(Node):
         self.hold_timer = self.create_timer(0.1, self.hold_publish_cb)
         self.target_class = 'basket'
         self.target_sub = self.create_subscription(String, '/camera/set_target', self.target_cb, 10)
+        self.reset_sub = self.create_subscription(Empty, '/vision/reset', self.reset_cb, 10)
 
         self.current_alt = 0.0
         self.current_cmd = Twist()
@@ -80,16 +81,32 @@ class VisionTracker(Node):
         self.kf.processNoiseCov = np.eye(4, dtype=np.float32) * 0.03
         self.kf_initialized = False
 
+    def _reset_tracking(self):
+        # KF 상태와 hold 기억을 통째로 버린다. kf_initialized=False 로 되돌리는 게
+        # 핵심이다: 다음 실탐지에서 image_callback 이 statePre/statePost 를 그 관측에
+        # 속도 0 으로 스냅시킨다. 이게 아니면 measurementNoiseCov(기본 1.0)가
+        # processNoiseCov(0.03)보다 30배 커서, 오래 dead-reckoning 한 필터는 실탐지가
+        # 재개돼도 쌓인 속도 성분 때문에 여러 프레임 동안 엉뚱한 좌표를 계속 낸다.
+        self.kf_initialized = False
+        self._held_target_msg = None
+        self._last_detection_time = 0.0
+        self._last_target_publish_time = 0.0
+
+    def reset_cb(self, msg):
+        # 하강을 처음부터 다시 시작하는 쪽(rescue 컨트롤러의 ESC 재시도 등)이 호출한다.
+        # 리셋하지 않으면 tracking_hold_sec(75초) 창이 land -> 파지 -> 재상승 사이클을
+        # 통째로 덮어서, 이전 하강 막판의 픽셀오차를 새 고도에 환산한 유령 타깃으로
+        # 다시 내려가게 된다.
+        self.get_logger().info("vision tracking reset requested: dropping KF/hold state.")
+        self._reset_tracking()
+
     def target_cb(self, msg):
         new_target = msg.data.strip().lower()
         if not new_target or new_target == self.target_class:
             return
         self.get_logger().info(f"vision target changed: {self.target_class} -> {new_target}")
         self.target_class = new_target
-        self.kf_initialized = False
-        self._held_target_msg = None
-        self._last_detection_time = 0.0
-        self._last_target_publish_time = 0.0
+        self._reset_tracking()
 
     def pose_cb(self, msg):
         self.current_alt = msg.pose.position.z
@@ -309,7 +326,11 @@ class VisionTracker(Node):
             return
         if (now - self._last_target_publish_time) < 0.08:
             return
-        self.error_pub.publish(self._copy_target_msg(self._held_target_msg))
+        # 이건 정의상 '지금 보고 있는 것'이 아니라 마지막 탐지의 재발행이다. 원본이
+        # 실탐지(YOLO/ArUco)였더라도 소비자가 실탐지로 오해하지 않게 source 를 덮어쓴다.
+        held = self._copy_target_msg(self._held_target_msg)
+        held.source = 'KF_HOLD'
+        self.error_pub.publish(held)
         self._last_target_publish_time = now
 
     def _copy_target_msg(self, src):
@@ -318,6 +339,12 @@ class VisionTracker(Node):
         msg.pixel_err_x = src.pixel_err_x
         msg.pixel_err_y = src.pixel_err_y
         msg.yaw_err_rad = src.yaw_err_rad
+        msg.target_class = src.target_class
+        msg.source = src.source
+        msg.confidence = src.confidence
+        msg.bbox_width = src.bbox_width
+        msg.bbox_height = src.bbox_height
+        msg.bbox_area = src.bbox_area
         return msg
 
     def _log_status(self, text):

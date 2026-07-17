@@ -22,9 +22,18 @@
           
           <specular>0 0 0 1</specular>
 
+          <!--
+            2026-07-16: 단색 초록(rescue_background.png)만 쓴다. land_marker.png
+            (빨강+흰십자)를 합성해 깔아봤더니 인식이 오히려 더 나빠져서 뺐다 - 원작자가
+            auto_spawn.sh 에 "+ marker / landing_marker.png interferes with
+            YOLO-OBB-only test" 라고 남긴 것과 같은 결론이다. 십자를 다시 넣고 싶으면
+            슬래브를 얹지 말고 이 텍스처에 합성할 것(별도 판을 쌓으면 크기가 다른 두 판이
+            턱을 만들고, 박스가 아래 판 윗면에 앉는 이상 그 위 어떤 판도 박스를 10mm
+            파고든다 - 피할 z 가 없다).
+          -->
           <pbr>
             <metal>
-              <albedo_map>model://land_marker/materials/textures/land_marker.png</albedo_map>
+              <albedo_map>model://land_marker/materials/textures/rescue_background.png</albedo_map>
             </metal>
           </pbr>
         </material>

@@ -3,27 +3,28 @@
   <model name="v_marker">
     <static>true</static>
     <link name="link">
+     
       <collision name="collision">
         <geometry>
           <box>
-            <size>5.0 5.0 0.01</size>
+            <size>3.0 3.0 0.01</size> 
           </box>
         </geometry>
       </collision>
       <visual name="visual">
         <geometry>
           <box>
-            <size>5.0 5.0 0.01</size>
+            <size>3.0 3.0 0.01</size>
           </box>
         </geometry>
         <material>
           <ambient>1 1 1 1</ambient>
           <diffuse>1 1 1 1</diffuse>
-
+          
           <specular>0 0 0 1</specular>
           <pbr>
             <metal>
-              <albedo_map>model://v_marker/materials/textures/v_marker.png</albedo_map>
+              <albedo_map>model://v_marker/materials/textures/Vertiport.png</albedo_map>
               </metal>
           </pbr>
         </material>

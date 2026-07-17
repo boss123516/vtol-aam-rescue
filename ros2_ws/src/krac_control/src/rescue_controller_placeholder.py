@@ -124,7 +124,17 @@ class RescueControllerPlaceholder(Node):
         self.selftest_dwell_sec = float(self.get_parameter("selftest_dwell_sec").value)
 
         # ---- CHECK_TARGET / GIMBAL_SWEEP / VISUAL_APPROACH / PRECISION_DESCENT ----
-        self.declare_parameter("check_target_wait_sec", 2.0)
+        # 마지막 실탐지가 이보다 오래됐으면 하강 시작/조향 판단에서 타깃을
+        # 못 본 것으로 친다. YOLO 추론 간격(0.25초)+지터는 통과하되, 착륙~파지~
+        # 재상승 사이클을 건너뛴 유령(수십 초)은 확실히 떨어뜨리는 값.
+        self.declare_parameter("live_detect_max_age_sec", 1.0)
+        # 2026-07-17: 2.0 이었다. 그 시절엔 트래커의 KF_HOLD 유령이 재시도 때마다
+        # 이 창을 0.5초 만에 통과시켜서 값이 실제로 쓰인 적이 없었다. 유령을 막고
+        # 나니 이 2초가 처음으로 진짜 예산이 됐는데, 재시도 직후엔 /vision/reset 으로
+        # 트래커를 비워둔 상태라 YOLO 첫 실탐지 + 10프레임 연속(0.5초)을 새로 채워야
+        # 한다. 2초는 빠듯하고, 놓치면 GIMBAL_SWEEP 이 직하를 안 보기 때문에(전 방향
+        # offnadir=60) 바로 아래 있는 바구니를 60초 동안 못 찾고 헛돈다.
+        self.declare_parameter("check_target_wait_sec", 5.0)
         self.declare_parameter("check_target_stable_frames", 10)  # ~0.5s @ setpoint_rate_hz
         # 스윕 각도는 "지면 수직선(직하)에서 몇 도 눕혔는가"로 지정한다. 60 이면
         # 직하에서 60도 벌어져 옆(측면)을 본다 -> yaw 를 돌리면 동서남북 주변을
@@ -157,13 +167,17 @@ class RescueControllerPlaceholder(Node):
         self.declare_parameter("manual_grasp_enable", True)
         self.declare_parameter("gz_model_name", "standard_vtol_0")
         self.declare_parameter("gripper_open_deg", -60.0)
-        # 집는 대상은 rescue_box(230x170x174mm, 짧은변 170mm)다. YOLO 도 트레이가
-        # 아니라 이 박스를 본다(실측 OBB 종횡비 1.14~1.49 = 박스 1.35 쪽).
-        # 각도-틈: -60=211mm(최대) / -45=177 / -43=172(접촉) / -38=159 / -30=138.
-        # 위치 제어기는 힘=p_gain*각도오차 라서 접촉각(-43)을 지나 더 안쪽을
-        # 명령해야 눌러준다 -> -38도면 간섭 11mm. (-24 는 트레이 137mm 용이라
-        # 박스엔 48mm 과간섭이고, -30 은 트레이에 1mm 헐렁해 파지력이 0 이었다.)
-        self.declare_parameter("gripper_grip_deg", -38.0)
+        # 집는 대상은 rescue_box = basket.dae(흰 바구니 + 안쪽 주황 조난자, 한 덩어리
+        # 강체). 외곽 238x138x74mm 이므로 **짧은변 138mm** 를 문다.
+        # 각도-틈: -60=211mm(최대) / -45=177 / -43=172 / -38=159 / -30=138 / -24=122.
+        # 위치 제어기는 힘=p_gain*각도오차 라서 접촉각을 지나 더 안쪽을 명령해야 눌러준다.
+        # 138mm 는 -30 이 딱 접촉(간섭 0 = 파지력 0)이므로 그보다 안쪽인 -26 을 쓴다
+        # -> 틈 ~127mm, 간섭 11mm. 이 11mm 는 구 박스(짧은변 170mm)에서 -38 로 검증된
+        # 간섭량과 같다.
+        # 2026-07-16: 구 box.dae(230x170x174, 짧은변 170mm) 시절 값이 -38 이었다.
+        # 메시가 basket.dae 로 바뀌며 짧은변이 170->138 로 줄었는데 -38(틈 159mm)을
+        # 그대로 두면 21mm 헐렁해서 집게가 허공을 쥔다.
+        self.declare_parameter("gripper_grip_deg", -26.0)
         self.declare_parameter("gripper_finger_min_deg", -90.0)
         self.declare_parameter("gripper_finger_max_deg", 30.0)
         self.declare_parameter("manual_grasp_timeout_sec", 600.0)
@@ -186,6 +200,7 @@ class RescueControllerPlaceholder(Node):
         # 넘어갔다. 넉넉히 잡되 무한정 매달리진 않게 한다.
         self.declare_parameter("precision_descent_timeout_sec", 150.0)
 
+        self.live_detect_max_age_sec = float(self.get_parameter("live_detect_max_age_sec").value)
         self.check_target_wait_sec = float(self.get_parameter("check_target_wait_sec").value)
         self.check_target_stable_frames = int(self.get_parameter("check_target_stable_frames").value)
         self.sweep_offnadir_deg = abs(float(self.get_parameter("sweep_offnadir_deg").value))
@@ -328,6 +343,7 @@ class RescueControllerPlaceholder(Node):
         self.precision_vel_sub = self.create_subscription(
             Twist, "/precision_lander/cmd_vel", self._precision_vel_cb, 10
         )
+        self.vision_reset_pub = self.create_publisher(Empty, "/vision/reset", 10)
         self.gimbal_cmd_pub = self.create_publisher(Vector3, "/gimbal/angle_cmd", 10)
         self.gimbal_preset_pub = self.create_publisher(Int32, "/gimbal/preset", 10)
         self.velocity_pub = self.create_publisher(
@@ -368,6 +384,9 @@ class RescueControllerPlaceholder(Node):
         # ---- 짐벌 스윕/접근 상태 ----
         self.target_error: Optional[TargetError] = None
         self.target_error_stamp_ns = 0
+        # 마지막 '실탐지'(YOLO/ArUco) 수신 시각. KF_HOLD 예측 재발행분은 갱신하지
+        # 않는다 - _target_fresh 가 유령과 정상 추적을 가르는 기준이다.
+        self.last_live_detect_ns = 0
         self.gimbal_yaw_deg = 0.0
         self.gimbal_pitch_deg = -90.0
         self.gimbal_att_stamp_ns = 0
@@ -470,9 +489,15 @@ class RescueControllerPlaceholder(Node):
     def _target_error_cb(self, msg: TargetError) -> None:
         self.target_error = msg
         self.target_error_stamp_ns = self._now_ns()
+        live = msg.is_detected and self._target_source_is_live(msg.source)
+        if live:
+            self.last_live_detect_ns = self._now_ns()
         # 착륙 직전 근접 구간에선 YOLO 가 타깃을 놓쳐 bbox 가 0 으로 온다. 실제로
         # OBB 를 본 마지막 프레임만 따로 남겨서 MANUAL_GRASP 의 짧은변 정렬에 쓴다.
-        if msg.is_detected and msg.bbox_width > 0.0 and msg.bbox_height > 0.0:
+        # KF_HOLD 재발행분도 bbox 를 실어오므로(그 값은 마지막 실탐지의 복사본이다)
+        # source 로 걸러야 한다 - 안 그러면 '마지막 실탐지'가 아니라 '마지막 재발행'을
+        # 잡게 되고, 재시도 사이클을 건너뛴 옛 OBB 로 집게를 돌린다.
+        if live and msg.bbox_width > 0.0 and msg.bbox_height > 0.0:
             self.last_obb_target = msg
 
     def _gimbal_att_cb(self, msg: Vector3Stamped) -> None:
@@ -489,7 +514,30 @@ class RescueControllerPlaceholder(Node):
             return False
         if self.target_error_stamp_ns <= 0:
             return False
-        return self._elapsed_sec(self.target_error_stamp_ns) <= max_age_sec
+        if self._elapsed_sec(self.target_error_stamp_ns) > max_age_sec:
+            return False
+        # vision_tracker 는 타깃을 놓쳐도 tracking_hold_sec(75초) 동안 칼만 예측값을
+        # is_detected=true 로 계속 발행한다(source='KF_HOLD'). 그 메시지는 꼬박꼬박
+        # 도착하므로 '도착시각' 기준 age 검사로는 절대 안 걸러진다 - 이전 하강 막판의
+        # 픽셀오차를 새 고도에 환산한 유령을 향해 재하강하는 원인이었다.
+        #
+        # 그렇다고 '최신 메시지의 source 가 KF_HOLD 면 탈락' 으로 판정하면 안 된다:
+        # 트래커는 정상 추적 중에도 YOLO 를 inference_interval_sec(0.25초)마다만
+        # 돌리고 그 사이 프레임(카메라 30fps)은 전부 KF_HOLD 로 채운다. 즉 건강한
+        # 추적의 대다수 메시지가 KF_HOLD 라서, 그걸로 자르면 정상 하강까지 깨진다.
+        #
+        # 올바른 기준은 '마지막 실탐지가 얼마나 오래됐나' 다. 0.25초 추론 간격과
+        # 지터는 통과시키고, 수십 초 묵은 유령만 떨어뜨린다.
+        if self.last_live_detect_ns <= 0:
+            return False
+        return self._elapsed_sec(self.last_live_detect_ns) <= self.live_detect_max_age_sec
+
+    @staticmethod
+    def _target_source_is_live(source: str) -> bool:
+        # 화이트리스트로 판정한다. hold 재발행분은 source 가 'KF_HOLD' 이고,
+        # 비었거나 모르는 값도 실탐지로 인정하지 않는다.
+        s = str(source).strip().upper()
+        return s.startswith("YOLO") or s.startswith("ARUCO")
 
     def _norm_target_error(self) -> tuple[float, float]:
         # vision_tracker 는 1024x1024 기준으로 픽셀오차를 발행한다.
@@ -847,6 +895,11 @@ class RescueControllerPlaceholder(Node):
                 self.sweep_idx = 0
                 self.sweep_started_ns = self._now_ns()
                 self.sweep_dir_enter_ns = self._now_ns()
+                # CHECK_TARGET 이 '거의 잡을 뻔한' 상태(count=5~9)로 타임아웃하면 그
+                # 카운트가 그대로 스윕으로 새어 들어가, 첫 방향에서 단 1프레임만 잡혀도
+                # sweep_detect_stable_frames(6)를 넘겨 바로 접근으로 확정된다. 6프레임
+                # 확인하라고 둔 게이트가 무력화되므로 구간 경계에서 반드시 0 으로 판다.
+                self.check_target_detect_count = 0
                 self._set_phase(Phase.GIMBAL_SWEEP)
             return
 
@@ -1005,6 +1058,7 @@ class RescueControllerPlaceholder(Node):
                     self.grasp_help_shown = False
                     self._set_phase(Phase.MANUAL_GRASP)
                 else:
+                    self._send_gimbal(0.0, -90.0)
                     self._set_phase(Phase.GROUND_WAIT)
                 return
 
@@ -1041,7 +1095,11 @@ class RescueControllerPlaceholder(Node):
                 )
 
             if self.grasp_confirmed:
-                self.get_logger().info("파지 확정 -> 상승 시퀀스 시작.")
+                self.get_logger().info("파지 확정 -> 짐벌 직하 복귀 후 상승 시퀀스 시작.")
+                # MANUAL_GRASP 에서 그리퍼 쪽(yaw=180, 직하에서 59도)으로 돌려놨던 짐벌을
+                # 직하로 되돌린다. 지금 보내두면 GROUND_WAIT+상승 동안(짐벌은 ~30도/s)
+                # 다 돌아서, 귀환 구간엔 카메라가 지면 수직으로 향한 채 출발한다.
+                self._send_gimbal(0.0, -90.0)
                 self._set_phase(Phase.GROUND_WAIT)
                 return
 
@@ -1152,8 +1210,18 @@ class RescueControllerPlaceholder(Node):
                     self._set_precision_lander(False)
                     self._send_gimbal(0.0, -90.0)
                     self.check_target_detect_count = 0
+                    # 트래커의 KF/hold 기억을 버린다. 이걸 안 하면 직전 하강 막판
+                    # (고도 ~1m)의 픽셀오차가 tracking_hold_sec(75초) 동안 살아남아,
+                    # 여기 핸드오버 고도에서 그 값이 고도 배율만큼 부풀려 환산된
+                    # 유령 타깃으로 재하강한다. 예: 고도 1m 에서 150px(=0.14m)로
+                    # 놓친 오차가 4m 에서는 0.58m 로 읽혀 [Approaching] 하강이
+                    # 걸리고, 내려갈수록 환산오차가 줄어 [Aligned] 까지 승격되며
+                    # has_been_aligned_ 가 켜진 채 엉뚱한 곳에 착륙한다.
+                    self.last_obb_target = None
+                    self.last_live_detect_ns = 0
+                    self.vision_reset_pub.publish(Empty())
                     self.get_logger().warn(
-                        "재시도: 핸드오버 고도 복귀 완료 -> REP 재탐지/재하강 시작."
+                        "재시도: 핸드오버 고도 복귀 완료 -> 비전 트래킹 리셋 후 REP 재탐지/재하강 시작."
                     )
                     self._set_phase(Phase.CHECK_TARGET)
                     return

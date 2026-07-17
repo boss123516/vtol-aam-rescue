@@ -1,58 +1,54 @@
 <?xml version="1.0" ?>
 <sdf version="1.6">
   <!--
-    box.dae raw mesh bounding box is 230x170x174mm (origin at bottom-center,
-    z starts at 0). scale must be 0.001 (mm->m, same convention as
-    survivor_tray) to come out to 0.23 x 0.17 x 0.174m - matching the tray's
-    own 0.237x0.137m footprint. The previous 0.003 scale made it 0.69 x 0.51 x
-    0.522m (3x too big in every dimension), which combined with auto_spawn.sh
-    floating it at z=0.5 caused the vehicle to physically collide with/get
-    snagged on this oversized static box during precision descent/gripper ops.
+    basket.dae 원시 메시는 238 x 138 x 74.272mm 인데 원점이 중심이 아니다:
+    x 는 -9~229, y 는 -9~129, z 는 0~74.272 (mm). 즉 바닥(z)만 0 기준이고 x/y 는
+    한쪽으로 쏠려 있다. scale 0.001 로 m 로 바꾸면 중심이 (0.110, 0.060) 이다.
+    auto_spawn.sh 는 이 모델을 REP 좌표에 z=0.0 으로 놓으면서 "원점 = 바닥중심"을
+    가정하므로(구 box.dae 의 규약), 그대로 두면 박스 실물이 x+110mm / y+60mm
+    어긋난 곳에 놓인다. visual/collision 에 (-0.110, -0.060, 0) pose 를 줘서
+    원점을 바닥중심으로 맞춘다. 결과: x -0.119~0.119, y -0.069~0.069, z 0~0.0743.
   -->
   <model name="box_dae">
     <!--
-      2026-07-15: 그리퍼로 이 박스를 실제로 집으려고 static 을 풀었다.
-      과거의 "착륙 중 기체가 21m 날아간" 사고는 static 인 채로 '풀메시' collider 가
-      AUTO.LAND 접지 경로에 박혀 있었던 조건에서 났다. 여기서는 그 두 조건을 모두
-      없앤다: (1) static 해제 -> 밀리면 밀리는 정상 강체, (2) collision 은 메시가
-      아니라 단순 box primitive. 메시는 visual 로만 쓴다.
-
-      집게 기하(standard_vtol 패치의 gripper_body z=-0.11 기준):
-        손가락 -60도=211mm(최대) / -45도=177mm / -43도쯤=170mm / -30도=138mm
-      짧은변 170mm 는 -43도 근처에서 물린다. 그때 손끝이 지면 위 ~30mm 라 높이
-      174mm 박스 옆면에 충분히 닿는다. 긴변 230mm 는 최대 211mm 를 넘어 못 문다
-      - 반드시 짧은변으로 접근해야 한다.
-
-      YOLO 가 실제로 보는 것도 (트레이가 아니라) 이 박스다: 실측 OBB 종횡비가
-      1.14~1.49 로 박스(230/170=1.35)와 맞고 트레이(237/137=1.73)와는 안 맞았다.
+      static 은 풀어둔다(그리퍼로 실제로 집는 대상이라 밀리면 밀려야 한다).
+      과거 "착륙 중 기체가 21m 날아간" 사고는 static 인 채로 풀메시 collider 가
+      AUTO.LAND 접지 경로에 박혀 있던 조건에서 났다. 그래서 여기서도 collision 은
+      메시가 아니라 단순 box primitive 로 둔다 - 메시는 visual 전용이다.
+      dynamic 바디의 concave trimesh collider 는 물리엔진에서 불안정하기도 하다.
     -->
     <static>false</static>
+
     <link name="link">
       <inertial>
-        <pose>0 0 0.087 0 0 0</pose>
-        <mass>0.5</mass>
-        <!-- 균일 직육면체 0.23 x 0.17 x 0.174, m=0.5 -->
+        <!-- 무게중심: 바닥중심 원점에서 높이의 절반 -->
+        <pose>0 0 0.0371 0 0 0</pose>
+        <mass>0.3</mass>
+        <!-- 균일 직육면체 0.238 x 0.138 x 0.0743, m=0.3 -->
         <inertia>
-          <ixx>0.00246</ixx><ixy>0</ixy><ixz>0</ixz>
-          <iyy>0.00346</iyy><iyz>0</iyz>
-          <izz>0.00341</izz>
+          <ixx>0.000614</ixx><ixy>0</ixy><ixz>0</ixz>
+          <iyy>0.001554</iyy><iyz>0</iyz>
+          <izz>0.001892</izz>
         </inertia>
       </inertial>
 
       <collision name="collision">
-        <pose>0 0 0.087 0 0 0</pose>
+        <pose>0 0 0.0371 0 0 0</pose>
         <geometry>
-          <box><size>0.23 0.17 0.174</size></box>
+          <box><size>0.238 0.138 0.0743</size></box>
         </geometry>
+        <!-- 집게가 옆면을 눌러서 마찰로 버티는 구조라 mu 가 파지력을 좌우한다.
+             구 box.dae 모델에서 검증된 값(1.5)을 그대로 쓴다. -->
         <surface>
           <friction><ode><mu>1.5</mu><mu2>1.5</mu2></ode></friction>
         </surface>
       </collision>
 
       <visual name="visual">
+        <pose>-0.110 -0.060 0 0 0 0</pose>
         <geometry>
           <mesh>
-            <uri>model://box/meshes/box.dae</uri>
+            <uri>model://box/meshes/basket.dae</uri>
             <scale>0.001 0.001 0.001</scale>
           </mesh>
         </geometry>
